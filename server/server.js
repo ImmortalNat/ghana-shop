@@ -16,7 +16,7 @@ app.use('/api/payment', paymentRoutes);
 
 // High-reliability product images
 const products = [
-  { id: 1, name: "Wireless Headphones", price: 250, image: "https://picsum.photos/id/1/400/300", description: "Premium noise cancellation headphones", category: "Electronics" },
+  { id: 1, name: "Wireless Headphones", price: 0.5, image: "https://picsum.photos/id/1/400/300", description: "Premium noise cancellation headphones", category: "Electronics" },
   { id: 2, name: "Smart Watch", price: 380, image: "https://picsum.photos/id/2/400/300", description: "Health monitoring smartwatch with heart-rate sensor", category: "Electronics" },
   { id: 3, name: "Running Sneakers", price: 290, image: "https://picsum.photos/id/3/400/300", description: "Lightweight and breathable running shoes", category: "Fashion" },
   { id: 4, name: "Leather Backpack", price: 180, image: "https://picsum.photos/id/4/400/300", description: "Genuine leather backpack with 15-inch laptop sleeve", category: "Fashion" },
