@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Confirmed - ShopWave</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="page-container" style="text-align: center; margin-top: 4rem;">
+    <div style="background: #fff; padding: 2.5rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); max-width: 500px; margin: 0 auto;">
+      <h1 style="font-size: 3.5rem;">🎉</h1>
+      <h2 style="color: var(--success); margin: 0.8rem 0;">Payment Successful!</h2>
+      <p id="statusMsg" style="color: var(--gray-600);">Verifying with Paystack...</p>
+      <div id="txInfo" style="margin: 1.5rem 0; text-align: left; background: #f8f9fa; padding: 1rem; border-radius: 6px; display: none; font-size:0.95rem;"></div>
+      <a href="/" class="btn" style="display:inline-block; width:auto; padding: 0.75rem 2rem;">Continue Shopping</a>
+    </div>
+  </div>
+  <script>
+    const ref = new URLSearchParams(window.location.search).get('reference');
+    if (ref) {
+      fetch('/api/payment/verify/' + ref)
+        .then(r => r.json())
+        .then(data => {
+          if (data.status && data.data.status === 'success') {
+            localStorage.removeItem('shopwave_cart');
+            document.getElementById('statusMsg').textContent = 'Medase! Your order has been placed successfully.';
+            document.getElementById('txInfo').style.display = 'block';
+            document.getElementById('txInfo').innerHTML = `
+              <strong>Reference:</strong> ${data.data.reference}<br>
+              <strong>Amount Paid:</strong> GH₵${(data.data.amount / 100).toFixed(2)}<br>
+              <strong>Customer:</strong> ${data.data.customer.email}<br>
+              <strong>Channel:</strong> ${data.data.channel.toUpperCase()}
+            `;
+          }
+        });
+    }
+  </script>
+</body>
+</html>
