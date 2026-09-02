@@ -52,21 +52,16 @@ app.get('/api/products', (req, res) => res.json(products));
 // ==================== LIVE ORDER TRACKING API ====================
 app.get('/api/orders/:ref', async (req, res) => {
   const ref = (req.params.ref || '').trim();
-  console.log(`🔍 Customer searching for order reference: [${ref}]`);
-
   const orders = getOrders();
   let order = orders.find(o => o.reference && o.reference.toLowerCase() === ref.toLowerCase());
 
   if (order) {
-    console.log(`✅ Found in local database: ${ref}`);
     return res.json({ success: true, order });
   }
 
   // Fallback: Check Paystack Live API directly
   try {
     const paystackSecret = (process.env.PAYSTACK_SECRET_KEY || '').trim();
-    console.log(`📡 Checking Paystack API directly for: ${ref}...`);
-
     const paystackRes = await axios.get(
       `https://api.paystack.co/transaction/verify/${ref}`,
       {
@@ -87,19 +82,16 @@ app.get('/api/orders/:ref', async (req, res) => {
         phone: tx.metadata?.phone || (tx.authorization?.mobile_money_number || 'N/A'),
         address: tx.metadata?.address || 'Accra, Ghana',
         items: tx.metadata?.itemsSummary || 'Standard Store Order',
-        status: 'Packaging', // Default live status
+        status: 'Packaging',
         paidAt: tx.paid_at || new Date().toISOString()
       };
 
       orders.push(newOrder);
       saveOrders(orders);
-      console.log(`✅ Paystack verified successfully! Saved to database.`);
       return res.json({ success: true, order: newOrder });
-    } else {
-      console.log(`❌ Paystack says transaction is not successful: ${ref}`);
     }
   } catch (err) {
-    console.error('❌ Paystack API Error:', err.response?.data || err.message);
+    console.error('Paystack API Error:', err.message);
   }
 
   res.status(404).json({ success: false, message: 'Order reference not found' });
@@ -133,34 +125,27 @@ app.post('/api/admin/update-status', (req, res) => {
   res.status(404).json({ success: false, message: 'Order not found' });
 });
 
-// ==================== PAGES ====================
-app.get('/cart', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'cart.html')));
-app.get('/checkout', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'checkout.html')));
-app.get('/success', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'success.html')));
-app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'admin.html')));
+// ==================== STATIC PAGES ====================
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
+app.get(['/cart', '/cart.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'cart.html')));
+app.get(['/checkout', '/checkout.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'checkout.html')));
+app.get(['/success', '/success.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'success.html')));
 
-// Direct inline track page (Guarantees Track ALWAYS loads, even if public/track.html is missing)
+// Direct Track Page (Guaranteed)
 app.get(['/track', '/track.html'], (req, res) => {
   const trackPath = path.join(__dirname, '..', 'public', 'track.html');
   if (fs.existsSync(trackPath)) {
     return res.sendFile(trackPath);
   }
-  
-  // Backup HTML if file isn't found
   res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Track Your Order</title>
   <link rel="stylesheet" href="/css/styles.css">
-  <style>
-    .circle { width:32px; height:32px; border-radius:50%; background:#dee2e6; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:bold; }
-    .circle.active { background:#ff6b35; }
-    .circle.done { background:#28a745; }
-  </style>
 </head>
 <body>
-  <nav class="navbar"><a href="/" class="navbar-brand">🛍️ Shop with <span>ease</span></a></nav>
+  <nav class="navbar"><a href="/" class="navbar-brand">🛍️ Shop with <span>ease</span></a><ul class="navbar-links"><li><a href="/">Home</a></li></ul></nav>
   <div class="page-container" style="max-width:600px; margin-top:3rem; text-align:center;">
     <div style="background:#fff; padding:2rem; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.05);">
       <h2>📦 Track Your Order</h2>
@@ -182,11 +167,104 @@ app.get(['/track', '/track.html'], (req, res) => {
       const data = await res.json();
       if (data.success) {
         const o = data.order;
-        box.innerHTML = '<h3>Status: <span style="color:#0a7e8c;">' + o.status + '</span></h3><p><strong>Ref:</strong> ' + o.reference + '<br><strong>Amount:</strong> GH₵' + Number(o.amount).toFixed(2) + '<br><strong>Customer:</strong> ' + o.customerEmail + '</p><a href="https://wa.me/233536473017?text=Hi, checking order ' + o.reference + '" target="_blank" class="btn" style="background:#25D366; display:block; text-align:center; text-decoration:none; margin-top:1rem;">💬 Chat on WhatsApp</a>';
+        box.innerHTML = '<h3>Status: <span style="color:#0a7e8c;">' + o.status + '</span></h3><p><strong>Ref:</strong> ' + o.reference + '<br><strong>Amount:</strong> GH₵' + Number(o.amount).toFixed(2) + '<br><strong>Customer:</strong> ' + o.customerName + '<br><strong>Phone:</strong> ' + o.phone + '<br><strong>Address:</strong> ' + o.address + '<br><strong>Items:</strong> ' + o.items + '</p><a href="https://wa.me/233536473017?text=Hi, checking order ' + o.reference + '" target="_blank" class="btn" style="background:#25D366; display:block; text-align:center; text-decoration:none; margin-top:1rem;">💬 Chat on WhatsApp</a>';
       } else {
         box.innerHTML = '<span style="color:red;">❌ Order not found. Check reference code.</span>';
       }
     };
+  </script>
+</body>
+</html>`);
+});
+
+// Direct Admin Page (Guaranteed to Load!)
+app.get(['/admin', '/admin.html'], (req, res) => {
+  const adminPath = path.join(__dirname, '..', 'public', 'admin.html');
+  if (fs.existsSync(adminPath)) {
+    return res.sendFile(adminPath);
+  }
+
+  // Backup Full Admin Dashboard
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Shop with ease</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .order-card { background: #fff; border-radius: 8px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 5px solid #0a7e8c; }
+    .status-select { padding: 0.4rem 0.6rem; font-weight: bold; border-radius: 4px; border: 1.5px solid #ccc; }
+  </style>
+</head>
+<body>
+  <nav class="navbar"><a href="/" class="navbar-brand">🛡️ Admin <span>Dashboard</span></a><ul class="navbar-links"><li><a href="/">View Store</a></li></ul></nav>
+  <div class="page-container" style="max-width:850px; margin-top:2rem;">
+    <div id="loginBox" style="max-width:380px; margin:3rem auto; background:#fff; padding:2rem; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.05); text-align:center;">
+      <h3>🔐 Admin Login</h3>
+      <input type="password" id="adminPass" placeholder="Password (admin123)" style="width:100%; padding:0.75rem; margin:1rem 0; border:1.5px solid #ddd; border-radius:6px;">
+      <button class="btn" onclick="loadOrders()" style="background:#0a7e8c;">Unlock Dashboard</button>
+    </div>
+
+    <div id="dashboard" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+        <h2>📦 Customer Orders</h2>
+        <button class="btn" style="width:auto; padding:0.5rem 1rem; background:#6c757d;" onclick="loadOrders()">🔄 Refresh</button>
+      </div>
+      <div id="ordersList">Loading...</div>
+    </div>
+  </div>
+
+  <script>
+    let savedPass = '';
+    async function loadOrders() {
+      const pass = document.getElementById('adminPass').value || savedPass;
+      savedPass = pass;
+      const res = await fetch('/api/admin/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pass })
+      });
+      const data = await res.json();
+      if (!data.success) return alert(data.message || 'Incorrect Password');
+      document.getElementById('loginBox').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      const box = document.getElementById('ordersList');
+      if (data.orders.length === 0) return box.innerHTML = '<p>No orders yet.</p>';
+      box.innerHTML = data.orders.map(o => \`
+        <div class="order-card">
+          <div style="display:flex; justify-content:space-between;">
+            <strong>Ref: \${o.reference}</strong>
+            <strong style="color:#0a7e8c; font-size:1.1rem;">GH₵\${Number(o.amount).toFixed(2)}</strong>
+          </div>
+          <div style="background:#f8f9fa; padding:0.8rem; margin:0.8rem 0; border-radius:6px; font-size:0.9rem;">
+            👤 <b>Customer:</b> \${o.customerName} (\${o.customerEmail})<br>
+            📞 <b>Phone:</b> <a href="tel:\${o.phone}">\${o.phone}</a> | <a href="https://wa.me/233\${(o.phone || '').replace(/^0/, '')}" target="_blank" style="color:#25D366; font-weight:bold;">💬 WhatsApp</a><br>
+            📍 <b>Address:</b> \${o.address}<br>
+            🛍️ <b>Items:</b> \${o.items}
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <label><b>Status:</b></label>
+              <select class="status-select" onchange="updateStatus('\${o.reference}', this.value)">
+                <option value="Packaging" \${o.status === 'Packaging' ? 'selected' : ''}>🟡 Packaging</option>
+                <option value="Out for Delivery" \${o.status === 'Out for Delivery' ? 'selected' : ''}>🚚 Out for Delivery</option>
+                <option value="Delivered" \${o.status === 'Delivered' ? 'selected' : ''}>🟢 Delivered</option>
+              </select>
+            </div>
+            <span style="font-weight:bold; color:#0a7e8c;">Current: \${o.status}</span>
+          </div>
+        </div>
+      \`).join('');
+    }
+
+    async function updateStatus(ref, st) {
+      await fetch('/api/admin/update-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: savedPass, reference: ref, status: st })
+      });
+      loadOrders();
+    }
   </script>
 </body>
 </html>`);
@@ -197,3 +275,5 @@ app.listen(PORT, () => {
   console.log("  🚀 ShopWave (GH₵) is live on Port: " + PORT);
   console.log("====================================================");
 });
+
+module.exports = app;
