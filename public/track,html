@@ -8,7 +8,7 @@
   <style>
     .timeline { margin: 2rem 0; text-align: left; }
     .step { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; }
-    .circle { width: 34px; height: 34px; border-radius: 50%; background: #dee2e6; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.95rem; flex-shrink: 0; }
+    .circle { width: 36px; height: 36px; border-radius: 50%; background: #dee2e6; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.95rem; flex-shrink: 0; }
     .circle.active { background: #ff6b35; animation: pulse 1.5s infinite; }
     .circle.done { background: #28a745; }
     @keyframes pulse {
@@ -23,14 +23,15 @@
     <a href="/" class="navbar-brand">🛍️ Shop with <span>ease</span></a>
     <ul class="navbar-links">
       <li><a href="/">Home</a></li>
-      <li><a href="/cart">Cart</a></li>
+      <li><a href="/track">Track Order 📦</a></li>
+      <li><a href="/cart">Cart 🛒</a></li>
     </ul>
   </nav>
 
   <div class="page-container" style="max-width: 600px; margin-top: 3rem;">
     <div style="background: #fff; padding: 2.5rem 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); text-align: center;">
-      <h2>📦 Track Your Order</h2>
-      <p style="color: #6c757d; margin: 0.5rem 0 1.5rem;">Enter your Order Reference Code (e.g. from your SMS / Receipt):</p>
+      <h2>📦 Track Your Delivery Progress</h2>
+      <p style="color: #6c757d; margin: 0.5rem 0 1.5rem;">Enter your Order Reference Code (from your SMS / Receipt):</p>
 
       <form id="trackForm" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
         <input type="text" id="orderRef" placeholder="e.g. jwj3lm0yky" required style="flex:1; padding: 0.8rem; border: 1.5px solid #dee2e6; border-radius: 6px; font-size: 1rem;">
@@ -61,7 +62,7 @@
           </div>
         </div>
 
-        <a id="waContact" href="#" target="_blank" class="btn" style="background:#25D366; display:block; text-align:center; text-decoration:none; margin-top:1rem;">
+        <a id="waContact" href="#" target="_blank" class="btn" style="background:#25D366; display:block; text-align:center; text-decoration:none; margin-top:1rem; padding: 0.8rem;">
           💬 Chat with Us on WhatsApp
         </a>
       </div>
@@ -90,12 +91,12 @@
           displayDetails.innerHTML = `
             <strong>Order Code:</strong> ${o.reference}<br>
             <strong>Customer:</strong> ${o.customerName || 'Customer'}<br>
-            <strong>Items:</strong> ${o.items || 'Items ordered'}<br>
+            <strong>Items:</strong> ${o.items || 'Store Items'}<br>
             <strong>Delivery Address:</strong> ${o.address || 'Accra, Ghana'}<br>
             <strong>Amount:</strong> GH₵${Number(o.amount).toFixed(2)}
           `;
 
-          // Reset step styling
+          // Reset step circles
           ['step1', 'step2', 'step3', 'step4'].forEach(id => {
             document.getElementById(id).className = 'circle';
           });
@@ -124,6 +125,13 @@
         displayDetails.innerHTML = 'Unable to check status. Try again later.';
       }
     });
+
+    // Auto-search if reference is in URL (e.g. /track?ref=jwj3lm0yky)
+    const urlRef = new URLSearchParams(window.location.search).get('ref');
+    if (urlRef) {
+      document.getElementById('orderRef').value = urlRef;
+      document.getElementById('trackForm').dispatchEvent(new Event('submit'));
+    }
   </script>
 </body>
 </html>
