@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Track Your Order - Shop with ease</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">🛍️ Shop with <span>ease</span></a>
+    <ul class="navbar-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/cart">Cart</a></li>
+    </ul>
+  </nav>
+
+  <div class="page-container" style="max-width: 600px; margin-top: 3rem;">
+    <div style="background: #fff; padding: 2.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); text-align: center;">
+      <h2>📦 Track Your Order</h2>
+      <p style="color: #6c757d; margin: 0.5rem 0 1.5rem;">Enter your Order Reference Code (from your payment receipt/SMS):</p>
+
+      <form id="trackForm" style="display: flex; gap: 0.5rem;">
+        <input type="text" id="orderRef" placeholder="e.g. jwj3lm0yky" required style="flex:1; padding: 0.8rem; border: 1.5px solid #dee2e6; border-radius: 6px;">
+        <button type="submit" class="btn" style="width: auto; padding: 0.8rem 1.5rem; margin: 0;">Track</button>
+      </form>
+
+      <div id="resultBox" style="display: none; margin-top: 2rem; text-align: left; background: #f8f9fa; padding: 1.5rem; border-radius: 8px;">
+        <h4 id="orderStatusHeader" style="color: #28a745; margin-bottom: 0.5rem;">✅ Order Found</h4>
+        <p id="orderDetailsText" style="font-size: 0.9rem; line-height: 1.6;"></p>
+        <a id="waContact" href="#" target="_blank" class="btn" style="background:#25D366; display:block; text-align:center; text-decoration:none; margin-top:1rem;">
+          💬 Chat with Dispatch Rider on WhatsApp
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('trackForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const ref = document.getElementById('orderRef').value.trim();
+      const resultBox = document.getElementById('resultBox');
+      const details = document.getElementById('orderDetailsText');
+      const waBtn = document.getElementById('waContact');
+
+      details.innerHTML = 'Searching for order...';
+      resultBox.style.display = 'block';
+
+      try {
+        const res = await fetch('/api/payment/verify/' + ref);
+        const data = await res.json();
+
+        if (data.status && data.data.status === 'success') {
+          const tx = data.data;
+          details.innerHTML = `
+            <strong>Reference:</strong> ${tx.reference}<br>
+            <strong>Status:</strong> <span style="color:#28a745; font-weight:bold;">Packaging & Preparing Dispatch</span><br>
+            <strong>Amount:</strong> GH₵${(tx.amount/100).toFixed(2)}<br>
+            <strong>Date:</strong> ${new Date(tx.paid_at).toLocaleString()}<br>
+            <strong>Estimated Delivery:</strong> Within 24 hours
+          `;
+          waBtn.href = `https://wa.me/233536473017?text=${encodeURIComponent('Hi, I am tracking my order: ' + tx.reference)}`;
+        } else {
+          details.innerHTML = '<span style="color:#dc3545;">Order reference not found or unpaid. Please check the code.</span>';
+        }
+      } catch (err) {
+        details.innerHTML = 'Unable to check status. Try again later.';
+      }
+    });
+  </script>
+</body>
+</html>
