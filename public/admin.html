@@ -6,7 +6,7 @@
   <title>Admin Dashboard - Shop with ease</title>
   <link rel="stylesheet" href="/css/styles.css">
   <style>
-    .tab-bar { display: flex; gap: 0.5rem; border-bottom: 2px solid #dee2e6; margin-bottom: 1.5rem; }
+    .tab-bar { display: flex; gap: 0.5rem; border-bottom: 2px solid #dee2e6; margin-bottom: 1.5rem; flex-wrap: wrap; }
     .tab-btn { padding: 0.8rem 1.4rem; background: none; border: none; font-size: 1rem; font-weight: bold; color: #6c757d; cursor: pointer; border-bottom: 3px solid transparent; }
     .tab-btn.active { color: #0a7e8c; border-color: #0a7e8c; }
     .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.2rem; }
@@ -40,9 +40,9 @@
 
       <!-- TAB 1: PRODUCTS -->
       <div id="productsTab">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
           <h3>All Store Products</h3>
-          <button class="btn" style="width: auto; background: #28a745; padding: 0.6rem 1.2rem;" onclick="openProductModal()">➕ Add New Product</button>
+          <button class="btn" style="width: auto; background: #28a745; padding: 0.6rem 1.2rem;" onclick="openProductModal()">➕ Upload New Product</button>
         </div>
         <div class="card-grid" id="productsList">Loading products...</div>
       </div>
@@ -74,10 +74,10 @@
               <input type="text" id="setHeroSubtitle" required>
             </div>
             <div class="form-group">
-              <label>Customer Support WhatsApp Number (with country code e.g. 233536473017)</label>
+              <label>WhatsApp Number (with country code e.g. 233536473017)</label>
               <input type="text" id="setWhatsappNumber" required>
             </div>
-            <button type="submit" class="btn" style="background: #0a7e8c; margin-top: 1rem;">💾 Save Store Settings</button>
+            <button type="submit" class="btn" style="background: #0a7e8c; margin-top: 1rem;">💾 Save Settings</button>
           </form>
         </div>
       </div>
@@ -87,17 +87,21 @@
   <!-- Add/Edit Product Modal -->
   <div class="modal" id="prodModal">
     <div class="modal-content">
-      <h3 id="modalTitle">Add Product</h3>
+      <h3 id="modalTitle">Upload Product</h3>
       <form id="productForm" onsubmit="saveProduct(event)" style="margin-top: 1rem;">
         <input type="hidden" id="prodId">
+        <input type="hidden" id="prodImageBase64">
+
         <div class="form-group">
           <label>Product Name *</label>
           <input type="text" id="prodName" required placeholder="e.g. Wireless Headphones">
         </div>
+
         <div class="form-group">
           <label>Price in GH₵ *</label>
           <input type="number" step="0.01" id="prodPrice" required placeholder="e.g. 250">
         </div>
+
         <div class="form-group">
           <label>Category *</label>
           <select id="prodCategory" required style="width: 100%; padding: 0.7rem; border-radius: 6px; border: 1px solid #ddd;">
@@ -108,17 +112,23 @@
             <option value="Other">Other</option>
           </select>
         </div>
+
+        <!-- Direct File Upload -->
         <div class="form-group">
-          <label>Image URL *</label>
-          <input type="url" id="prodImage" required placeholder="https://example.com/image.jpg">
-          <small style="color: #6c757d;">You can use free images from Unsplash or Picsum</small>
+          <label>Upload Product Photo * (From Camera / Files / Photos)</label>
+          <input type="file" id="prodFile" accept="image/*" onchange="handleImageUpload(event)" style="width: 100%; padding: 0.6rem; border: 1.5px dashed #0a7e8c; border-radius: 6px; background: #f8f9fa;">
+          <div style="margin-top: 0.5rem; text-align: center;">
+            <img id="imgPreview" src="" style="display: none; width: 120px; height: 120px; object-fit: cover; border-radius: 8px; margin: 0.5rem auto; border: 1px solid #ddd;">
+          </div>
         </div>
+
         <div class="form-group">
           <label>Description</label>
           <textarea id="prodDesc" rows="3" style="width: 100%; padding: 0.7rem; border-radius: 6px; border: 1px solid #ddd;"></textarea>
         </div>
+
         <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
-          <button type="submit" class="btn" style="background: #28a745;">Save Product</button>
+          <button type="submit" class="btn" id="saveProdBtn" style="background: #28a745;">Save Product</button>
           <button type="button" class="btn" style="background: #6c757d;" onclick="closeProductModal()">Cancel</button>
         </div>
       </form>
@@ -153,7 +163,50 @@
       loadProducts();
     }
 
-    // ================= PRODUCTS CRUD =================
+    // ================= IMAGE COMPRESSOR & PREVIEW =================
+    function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const max_size = 600; // Resize image so it uploads fast
+
+          if (width > height) {
+            if (width > max_size) {
+              height *= max_size / width;
+              width = max_size;
+            }
+          } else {
+            if (height > max_size) {
+              width *= max_size / height;
+              height = max_size;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+          document.getElementById('prodImageBase64').value = compressedBase64;
+          
+          const preview = document.getElementById('imgPreview');
+          preview.src = compressedBase64;
+          preview.style.display = 'block';
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ================= PRODUCTS =================
     async function loadProducts() {
       const res = await fetch('/api/products');
       const products = await res.json();
@@ -175,12 +228,14 @@
     }
 
     function openProductModal() {
-      document.getElementById('modalTitle').textContent = 'Add New Product';
+      document.getElementById('modalTitle').textContent = 'Upload New Product';
       document.getElementById('prodId').value = '';
       document.getElementById('prodName').value = '';
       document.getElementById('prodPrice').value = '';
-      document.getElementById('prodImage').value = '';
       document.getElementById('prodDesc').value = '';
+      document.getElementById('prodImageBase64').value = '';
+      document.getElementById('prodFile').value = '';
+      document.getElementById('imgPreview').style.display = 'none';
       document.getElementById('prodModal').style.display = 'flex';
     }
 
@@ -194,19 +249,32 @@
       document.getElementById('prodName').value = p.name;
       document.getElementById('prodPrice').value = p.price;
       document.getElementById('prodCategory').value = p.category || 'Electronics';
-      document.getElementById('prodImage').value = p.image;
+      document.getElementById('prodImageBase64').value = p.image;
       document.getElementById('prodDesc').value = p.description || '';
+      
+      const preview = document.getElementById('imgPreview');
+      preview.src = p.image;
+      preview.style.display = 'block';
       document.getElementById('prodModal').style.display = 'flex';
     }
 
     async function saveProduct(e) {
       e.preventDefault();
+      const image = document.getElementById('prodImageBase64').value;
+      if (!image) {
+        return alert('Please select a photo for the product.');
+      }
+
+      const saveBtn = document.getElementById('saveProdBtn');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
       const product = {
         id: document.getElementById('prodId').value,
         name: document.getElementById('prodName').value,
         price: document.getElementById('prodPrice').value,
         category: document.getElementById('prodCategory').value,
-        image: document.getElementById('prodImage').value,
+        image: image,
         description: document.getElementById('prodDesc').value
       };
 
@@ -216,6 +284,9 @@
         body: JSON.stringify({ password: savedPass, product })
       });
       const data = await res.json();
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Product';
+
       if (data.success) {
         closeProductModal();
         loadProducts();
@@ -279,7 +350,7 @@
       loadOrders();
     }
 
-    // ================= STORE SETTINGS =================
+    // ================= SETTINGS =================
     async function loadSettings() {
       const res = await fetch('/api/settings');
       const s = await res.json();
