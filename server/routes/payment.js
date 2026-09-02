@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+const crypto = require('crypto');
 
 const PAYSTACK_SECRET_KEY = (process.env.PAYSTACK_SECRET_KEY || '').trim();
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
@@ -8,21 +9,35 @@ const PAYSTACK_BASE_URL = 'https://api.paystack.co';
 router.post('/initialize', async (req, res) => {
   try {
     const { email, amount, metadata, callback_url } = req.body;
-
     if (!email || !amount) {
       return res.status(400).json({ status: false, message: 'Email and amount are required' });
     }
 
-    if (!PAYSTACK_SECRET_KEY || PAYSTACK_SECRET_KEY.includes('YOUR_SECRET_KEY_HERE')) {
-      console.error('❌ ERROR: You have not set your PAYSTACK_SECRET_KEY in .env');
-      return res.status(500).json({
-        status: false,
-        message: 'Paystack Secret Key is missing in .env'
-      });
-    }
-
-    // Convert Cedis to Pesewas (GHS * 100)
     const amountInPesewas = Math.round(amount * 100);
+
+    // Format custom fields so Paystack displays them clearly on your dashboard
+    const customFields = [
+      {
+        display_name: "Items Purchased",
+        variable_name: "items_purchased",
+        value: metadata?.itemsSummary || "N/A"
+      },
+      {
+        display_name: "Customer Name",
+        variable_name: "customer_name",
+        value: metadata?.customerName || "N/A"
+      },
+      {
+        display_name: "Phone Number",
+        variable_name: "phone_number",
+        value: metadata?.phone || "N/A"
+      },
+      {
+        display_name: "Delivery Address",
+        variable_name: "delivery_address",
+        value: metadata?.address || "N/A"
+      }
+    ];
 
     const response = await axios.post(
       `${PAYSTACK_BASE_URL}/transaction/initialize`,
@@ -32,7 +47,10 @@ router.post('/initialize', async (req, res) => {
         currency: 'GHS',
         channels: ['card', 'mobile_money'],
         callback_url: callback_url || `${process.env.BASE_URL}/success`,
-        metadata: metadata || {}
+        metadata: {
+          ...metadata,
+          custom_fields: customFields
+        }
       },
       {
         headers: {
@@ -44,7 +62,7 @@ router.post('/initialize', async (req, res) => {
 
     res.json(response.data);
   } catch (error) {
-    console.error('❌ Paystack Error:', error.response?.data || error.message);
+    console.error('Paystack error:', error.response?.data || error.message);
     res.status(500).json({
       status: false,
       message: error.response?.data?.message || 'Payment initialization failed'
