@@ -3,155 +3,307 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Orders Panel - Shop with ease</title>
+  <title>Admin Dashboard - Shop with ease</title>
   <link rel="stylesheet" href="/css/styles.css">
   <style>
-    .order-card {
-      background: #fff;
-      border-radius: 10px;
-      padding: 1.5rem;
-      margin-bottom: 1.2rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-      border-left: 5px solid #0a7e8c;
-    }
-    .status-select {
-      padding: 0.5rem 0.8rem;
-      font-weight: bold;
-      border-radius: 6px;
-      border: 1.5px solid #dee2e6;
-      background: #f8f9fa;
-      font-size: 0.95rem;
-    }
-    .badge {
-      display: inline-block;
-      padding: 0.3rem 0.6rem;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      font-weight: bold;
-      color: #fff;
-    }
-    .badge-Packaging { background: #ffc107; color: #000; }
-    .badge-OutForDelivery { background: #17a2b8; }
-    .badge-Delivered { background: #28a745; }
+    .tab-bar { display: flex; gap: 0.5rem; border-bottom: 2px solid #dee2e6; margin-bottom: 1.5rem; }
+    .tab-btn { padding: 0.8rem 1.4rem; background: none; border: none; font-size: 1rem; font-weight: bold; color: #6c757d; cursor: pointer; border-bottom: 3px solid transparent; }
+    .tab-btn.active { color: #0a7e8c; border-color: #0a7e8c; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.2rem; }
+    .admin-card { background: #fff; padding: 1.2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .order-card { background: #fff; border-radius: 8px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 5px solid #0a7e8c; }
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; }
+    .modal-content { background:#fff; padding:2rem; border-radius:10px; max-width:480px; width:90%; max-height:90vh; overflow-y:auto; }
   </style>
 </head>
 <body>
   <nav class="navbar">
-    <a href="/" class="navbar-brand">🛡️ Admin <span>Panel</span></a>
-    <ul class="navbar-links">
-      <li><a href="/">View Store</a></li>
-      <li><a href="/track">Track Page</a></li>
-    </ul>
+    <a href="/" class="navbar-brand">🛡️ Admin <span>Manager</span></a>
+    <ul class="navbar-links"><li><a href="/" target="_blank">👁️ View Live Store</a></li></ul>
   </nav>
 
-  <div class="page-container" style="max-width: 900px;">
+  <div class="page-container" style="max-width: 950px; margin-top: 2rem;">
     <!-- Login Screen -->
-    <div id="loginBox" style="max-width: 400px; margin: 4rem auto; background: #fff; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center;">
-      <h3>🔐 Admin Access</h3>
-      <p style="color: #6c757d; font-size: 0.9rem; margin: 0.5rem 0 1rem;">Enter your Admin Password:</p>
-      <input type="password" id="adminPass" placeholder="Default: admin123" style="width: 100%; padding: 0.75rem; border: 1.5px solid #dee2e6; border-radius: 6px; margin-bottom: 1rem; font-size: 1rem;">
-      <button class="btn" style="background: #0a7e8c;" onclick="loadOrders()">Unlock Panel</button>
+    <div id="loginBox" style="max-width: 380px; margin: 4rem auto; background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center;">
+      <h3>🔐 Admin Login</h3>
+      <input type="password" id="adminPass" placeholder="Password (admin123)" style="width: 100%; padding: 0.8rem; margin: 1rem 0; border: 1.5px solid #ddd; border-radius: 6px;">
+      <button class="btn" onclick="initDashboard()" style="background: #0a7e8c;">Unlock Dashboard</button>
     </div>
 
-    <!-- Orders Dashboard Screen -->
-    <div id="dashboard" style="display: none; margin-top: 2rem;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-        <h2>📦 Customer Orders & Deliveries</h2>
-        <button class="btn" style="width: auto; padding: 0.5rem 1rem; background: #6c757d;" onclick="loadOrders()">🔄 Refresh</button>
+    <!-- Main Dashboard -->
+    <div id="dashboard" style="display: none;">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('productsTab', this)">🛍️ Manage Products</button>
+        <button class="tab-btn" onclick="switchTab('ordersTab', this)">📦 Customer Orders</button>
+        <button class="tab-btn" onclick="switchTab('settingsTab', this)">⚙️ Store Branding</button>
       </div>
 
-      <div id="ordersList">Loading orders...</div>
+      <!-- TAB 1: PRODUCTS -->
+      <div id="productsTab">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h3>All Store Products</h3>
+          <button class="btn" style="width: auto; background: #28a745; padding: 0.6rem 1.2rem;" onclick="openProductModal()">➕ Add New Product</button>
+        </div>
+        <div class="card-grid" id="productsList">Loading products...</div>
+      </div>
+
+      <!-- TAB 2: ORDERS -->
+      <div id="ordersTab" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h3>Customer Orders & Deliveries</h3>
+          <button class="btn" style="width: auto; padding: 0.5rem 1rem; background: #6c757d;" onclick="loadOrders()">🔄 Refresh Orders</button>
+        </div>
+        <div id="ordersList">Loading orders...</div>
+      </div>
+
+      <!-- TAB 3: STORE SETTINGS -->
+      <div id="settingsTab" style="display: none;">
+        <div class="admin-card" style="max-width: 600px;">
+          <h3>⚙️ Store Branding & Details</h3>
+          <form id="settingsForm" onsubmit="saveSettings(event)" style="margin-top: 1rem;">
+            <div class="form-group">
+              <label>Store Name (Navbar)</label>
+              <input type="text" id="setStoreName" required>
+            </div>
+            <div class="form-group">
+              <label>Hero Title (Main Banner)</label>
+              <input type="text" id="setHeroTitle" required>
+            </div>
+            <div class="form-group">
+              <label>Hero Subtitle (Description)</label>
+              <input type="text" id="setHeroSubtitle" required>
+            </div>
+            <div class="form-group">
+              <label>Customer Support WhatsApp Number (with country code e.g. 233536473017)</label>
+              <input type="text" id="setWhatsappNumber" required>
+            </div>
+            <button type="submit" class="btn" style="background: #0a7e8c; margin-top: 1rem;">💾 Save Store Settings</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Product Modal -->
+  <div class="modal" id="prodModal">
+    <div class="modal-content">
+      <h3 id="modalTitle">Add Product</h3>
+      <form id="productForm" onsubmit="saveProduct(event)" style="margin-top: 1rem;">
+        <input type="hidden" id="prodId">
+        <div class="form-group">
+          <label>Product Name *</label>
+          <input type="text" id="prodName" required placeholder="e.g. Wireless Headphones">
+        </div>
+        <div class="form-group">
+          <label>Price in GH₵ *</label>
+          <input type="number" step="0.01" id="prodPrice" required placeholder="e.g. 250">
+        </div>
+        <div class="form-group">
+          <label>Category *</label>
+          <select id="prodCategory" required style="width: 100%; padding: 0.7rem; border-radius: 6px; border: 1px solid #ddd;">
+            <option value="Electronics">Electronics</option>
+            <option value="Fashion">Fashion</option>
+            <option value="Home">Home</option>
+            <option value="Beauty">Beauty</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Image URL *</label>
+          <input type="url" id="prodImage" required placeholder="https://example.com/image.jpg">
+          <small style="color: #6c757d;">You can use free images from Unsplash or Picsum</small>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="prodDesc" rows="3" style="width: 100%; padding: 0.7rem; border-radius: 6px; border: 1px solid #ddd;"></textarea>
+        </div>
+        <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+          <button type="submit" class="btn" style="background: #28a745;">Save Product</button>
+          <button type="button" class="btn" style="background: #6c757d;" onclick="closeProductModal()">Cancel</button>
+        </div>
+      </form>
     </div>
   </div>
 
   <script>
     let savedPass = '';
 
-    async function loadOrders() {
-      const pass = document.getElementById('adminPass').value || savedPass;
-      savedPass = pass;
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      ['productsTab', 'ordersTab', 'settingsTab'].forEach(t => {
+        document.getElementById(t).style.display = (t === tabId) ? 'block' : 'none';
+      });
+      if (tabId === 'ordersTab') loadOrders();
+      if (tabId === 'settingsTab') loadSettings();
+    }
 
-      try {
-        const res = await fetch('/api/admin/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: pass })
-        });
+    async function initDashboard() {
+      savedPass = document.getElementById('adminPass').value;
+      const res = await fetch('/api/admin/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: savedPass })
+      });
+      const data = await res.json();
+      if (!data.success) return alert(data.message || 'Incorrect Password');
 
-        const data = await res.json();
-        if (!data.success) {
-          alert(data.message || 'Incorrect password!');
-          return;
-        }
+      document.getElementById('loginBox').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      loadProducts();
+    }
 
-        document.getElementById('loginBox').style.display = 'none';
-        document.getElementById('dashboard').style.display = 'block';
+    // ================= PRODUCTS CRUD =================
+    async function loadProducts() {
+      const res = await fetch('/api/products');
+      const products = await res.json();
+      const list = document.getElementById('productsList');
+      if (products.length === 0) return list.innerHTML = '<p>No products in store. Add one!</p>';
 
-        const container = document.getElementById('ordersList');
-        if (data.orders.length === 0) {
-          container.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 2rem;">No orders found yet.</p>';
-          return;
-        }
-
-        container.innerHTML = data.orders.map(o => `
-          <div class="order-card">
-            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.8rem;">
-              <div>
-                <strong style="font-size: 1.1rem;">Ref: ${o.reference}</strong>
-                <div style="color: #6c757d; font-size: 0.85rem;">Date: ${new Date(o.paidAt || o.createdAt || Date.now()).toLocaleString()}</div>
-              </div>
-              <div>
-                <span style="font-size: 1.2rem; font-weight: bold; color: #0a7e8c;">GH₵${Number(o.amount).toFixed(2)}</span>
-              </div>
-            </div>
-
-            <div style="background: #f8f9fa; padding: 0.8rem; border-radius: 6px; font-size: 0.9rem; margin-bottom: 1rem;">
-              👤 <strong>Customer:</strong> ${o.customerName || 'N/A'} (${o.customerEmail})<br>
-              📞 <strong>Phone:</strong> <a href="tel:${o.phone}">${o.phone}</a> | <a href="https://wa.me/233${(o.phone || '').replace(/^0/, '')}" target="_blank" style="color: #25D366; font-weight: bold;">💬 WhatsApp Chat</a><br>
-              📍 <strong>Delivery Address:</strong> ${o.address || 'Accra, Ghana'}<br>
-              🛍️ <strong>Items:</strong> ${o.items || 'Standard Order'}
-            </div>
-
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
-              <div>
-                <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.2rem;">Change Delivery Status:</label>
-                <select class="status-select" onchange="updateStatus('${o.reference}', this.value)">
-                  <option value="Packaging" ${o.status === 'Packaging' ? 'selected' : ''}>🟡 Packaging & Processing</option>
-                  <option value="Out for Delivery" ${o.status === 'Out for Delivery' ? 'selected' : ''}>🚚 Out for Delivery (Rider Dispatched)</option>
-                  <option value="Delivered" ${o.status === 'Delivered' ? 'selected' : ''}>🟢 Delivered</option>
-                </select>
-              </div>
-              <span class="badge ${o.status === 'Out for Delivery' ? 'badge-OutForDelivery' : 'badge-' + o.status}">
-                Current: ${o.status || 'Packaging'}
-              </span>
-            </div>
+      list.innerHTML = products.map(p => `
+        <div class="admin-card">
+          <img src="${p.image}" style="width:100%; height:160px; object-fit:cover; border-radius:6px;">
+          <h4 style="margin:0.5rem 0 0.2rem;">${p.name}</h4>
+          <span style="color:#0a7e8c; font-weight:bold; font-size:1.1rem;">GH₵${Number(p.price).toFixed(2)}</span>
+          <p style="color:#6c757d; font-size:0.85rem; margin:0.3rem 0 0.8rem;">${p.description || ''}</p>
+          <div style="display:flex; gap:0.5rem;">
+            <button class="btn" style="padding:0.4rem; background:#0a7e8c;" onclick='editProduct(${JSON.stringify(p)})'>✏️ Edit</button>
+            <button class="btn" style="padding:0.4rem; background:#dc3545;" onclick="deleteProduct(${p.id})">🗑️ Delete</button>
           </div>
-        `).join('');
-      } catch (err) {
-        alert('Connection error. Please try again.');
+        </div>
+      `).join('');
+    }
+
+    function openProductModal() {
+      document.getElementById('modalTitle').textContent = 'Add New Product';
+      document.getElementById('prodId').value = '';
+      document.getElementById('prodName').value = '';
+      document.getElementById('prodPrice').value = '';
+      document.getElementById('prodImage').value = '';
+      document.getElementById('prodDesc').value = '';
+      document.getElementById('prodModal').style.display = 'flex';
+    }
+
+    function closeProductModal() {
+      document.getElementById('prodModal').style.display = 'none';
+    }
+
+    function editProduct(p) {
+      document.getElementById('modalTitle').textContent = 'Edit Product';
+      document.getElementById('prodId').value = p.id;
+      document.getElementById('prodName').value = p.name;
+      document.getElementById('prodPrice').value = p.price;
+      document.getElementById('prodCategory').value = p.category || 'Electronics';
+      document.getElementById('prodImage').value = p.image;
+      document.getElementById('prodDesc').value = p.description || '';
+      document.getElementById('prodModal').style.display = 'flex';
+    }
+
+    async function saveProduct(e) {
+      e.preventDefault();
+      const product = {
+        id: document.getElementById('prodId').value,
+        name: document.getElementById('prodName').value,
+        price: document.getElementById('prodPrice').value,
+        category: document.getElementById('prodCategory').value,
+        image: document.getElementById('prodImage').value,
+        description: document.getElementById('prodDesc').value
+      };
+
+      const res = await fetch('/api/admin/products/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: savedPass, product })
+      });
+      const data = await res.json();
+      if (data.success) {
+        closeProductModal();
+        loadProducts();
+      } else {
+        alert(data.message || 'Error saving product');
       }
     }
 
-    async function updateStatus(ref, newStatus) {
-      try {
-        const res = await fetch('/api/admin/update-status', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            password: savedPass,
-            reference: ref,
-            status: newStatus
-          })
-        });
-        const data = await res.json();
-        if (data.success) {
-          loadOrders();
-        } else {
-          alert('Failed to update status.');
-        }
-      } catch (err) {
-        alert('Error updating status.');
-      }
+    async function deleteProduct(id) {
+      if (!confirm('Are you sure you want to delete this product?')) return;
+      const res = await fetch('/api/admin/products/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: savedPass, productId: id })
+      });
+      const data = await res.json();
+      if (data.success) loadProducts();
+    }
+
+    // ================= ORDERS =================
+    async function loadOrders() {
+      const res = await fetch('/api/admin/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: savedPass })
+      });
+      const data = await res.json();
+      const box = document.getElementById('ordersList');
+      if (data.orders.length === 0) return box.innerHTML = '<p>No orders yet.</p>';
+
+      box.innerHTML = data.orders.map(o => `
+        <div class="order-card">
+          <div style="display:flex; justify-content:space-between;">
+            <strong>Ref: ${o.reference}</strong>
+            <strong style="color:#0a7e8c;">GH₵${Number(o.amount).toFixed(2)}</strong>
+          </div>
+          <div style="background:#f8f9fa; padding:0.8rem; margin:0.8rem 0; border-radius:6px; font-size:0.9rem;">
+            👤 <b>Customer:</b> ${o.customerName} (${o.customerEmail})<br>
+            📞 <b>Phone:</b> <a href="tel:${o.phone}">${o.phone}</a> | <a href="https://wa.me/233${(o.phone || '').replace(/^0/, '')}" target="_blank" style="color:#25D366; font-weight:bold;">💬 WhatsApp</a><br>
+            📍 <b>Address:</b> ${o.address}<br>
+            🛍️ <b>Items:</b> ${o.items}
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <select style="padding:0.4rem; font-weight:bold;" onchange="updateStatus('${o.reference}', this.value)">
+              <option value="Packaging" ${o.status === 'Packaging' ? 'selected' : ''}>🟡 Packaging</option>
+              <option value="Out for Delivery" ${o.status === 'Out for Delivery' ? 'selected' : ''}>🚚 Out for Delivery</option>
+              <option value="Delivered" ${o.status === 'Delivered' ? 'selected' : ''}>🟢 Delivered</option>
+            </select>
+            <span style="font-weight:bold; color:#0a7e8c;">Current: ${o.status}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function updateStatus(ref, st) {
+      await fetch('/api/admin/update-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: savedPass, reference: ref, status: st })
+      });
+      loadOrders();
+    }
+
+    // ================= STORE SETTINGS =================
+    async function loadSettings() {
+      const res = await fetch('/api/settings');
+      const s = await res.json();
+      document.getElementById('setStoreName').value = s.storeName || '';
+      document.getElementById('setHeroTitle').value = s.heroTitle || '';
+      document.getElementById('setHeroSubtitle').value = s.heroSubtitle || '';
+      document.getElementById('setWhatsappNumber').value = s.whatsappNumber || '';
+    }
+
+    async function saveSettings(e) {
+      e.preventDefault();
+      const settings = {
+        storeName: document.getElementById('setStoreName').value,
+        heroTitle: document.getElementById('setHeroTitle').value,
+        heroSubtitle: document.getElementById('setHeroSubtitle').value,
+        whatsappNumber: document.getElementById('setWhatsappNumber').value
+      };
+      const res = await fetch('/api/admin/settings/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: savedPass, settings })
+      });
+      const data = await res.json();
+      if (data.success) alert('Store settings updated successfully! 🚀');
     }
   </script>
 </body>
