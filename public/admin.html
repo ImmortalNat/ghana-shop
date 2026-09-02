@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Orders Panel - Shop with ease</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .order-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.2rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      border-left: 5px solid #0a7e8c;
+    }
+    .status-select {
+      padding: 0.5rem 0.8rem;
+      font-weight: bold;
+      border-radius: 6px;
+      border: 1.5px solid #dee2e6;
+      background: #f8f9fa;
+      font-size: 0.95rem;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: #fff;
+    }
+    .badge-Packaging { background: #ffc107; color: #000; }
+    .badge-OutForDelivery { background: #17a2b8; }
+    .badge-Delivered { background: #28a745; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">🛡️ Admin <span>Panel</span></a>
+    <ul class="navbar-links">
+      <li><a href="/">View Store</a></li>
+      <li><a href="/track">Track Page</a></li>
+    </ul>
+  </nav>
+
+  <div class="page-container" style="max-width: 900px;">
+    <!-- Login Screen -->
+    <div id="loginBox" style="max-width: 400px; margin: 4rem auto; background: #fff; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center;">
+      <h3>🔐 Admin Access</h3>
+      <p style="color: #6c757d; font-size: 0.9rem; margin: 0.5rem 0 1rem;">Enter your Admin Password:</p>
+      <input type="password" id="adminPass" placeholder="Default: admin123" style="width: 100%; padding: 0.75rem; border: 1.5px solid #dee2e6; border-radius: 6px; margin-bottom: 1rem; font-size: 1rem;">
+      <button class="btn" style="background: #0a7e8c;" onclick="loadOrders()">Unlock Panel</button>
+    </div>
+
+    <!-- Orders Dashboard Screen -->
+    <div id="dashboard" style="display: none; margin-top: 2rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2>📦 Customer Orders & Deliveries</h2>
+        <button class="btn" style="width: auto; padding: 0.5rem 1rem; background: #6c757d;" onclick="loadOrders()">🔄 Refresh</button>
+      </div>
+
+      <div id="ordersList">Loading orders...</div>
+    </div>
+  </div>
+
+  <script>
+    let savedPass = '';
+
+    async function loadOrders() {
+      const pass = document.getElementById('adminPass').value || savedPass;
+      savedPass = pass;
+
+      try {
+        const res = await fetch('/api/admin/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pass })
+        });
+
+        const data = await res.json();
+        if (!data.success) {
+          alert(data.message || 'Incorrect password!');
+          return;
+        }
+
+        document.getElementById('loginBox').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+
+        const container = document.getElementById('ordersList');
+        if (data.orders.length === 0) {
+          container.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 2rem;">No orders found yet.</p>';
+          return;
+        }
+
+        container.innerHTML = data.orders.map(o => `
+          <div class="order-card">
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.8rem;">
+              <div>
+                <strong style="font-size: 1.1rem;">Ref: ${o.reference}</strong>
+                <div style="color: #6c757d; font-size: 0.85rem;">Date: ${new Date(o.paidAt || o.createdAt || Date.now()).toLocaleString()}</div>
+              </div>
+              <div>
+                <span style="font-size: 1.2rem; font-weight: bold; color: #0a7e8c;">GH₵${Number(o.amount).toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 0.8rem; border-radius: 6px; font-size: 0.9rem; margin-bottom: 1rem;">
+              👤 <strong>Customer:</strong> ${o.customerName || 'N/A'} (${o.customerEmail})<br>
+              📞 <strong>Phone:</strong> <a href="tel:${o.phone}">${o.phone}</a> | <a href="https://wa.me/233${(o.phone || '').replace(/^0/, '')}" target="_blank" style="color: #25D366; font-weight: bold;">💬 WhatsApp Chat</a><br>
+              📍 <strong>Delivery Address:</strong> ${o.address || 'Accra, Ghana'}<br>
+              🛍️ <strong>Items:</strong> ${o.items || 'Standard Order'}
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+              <div>
+                <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.2rem;">Change Delivery Status:</label>
+                <select class="status-select" onchange="updateStatus('${o.reference}', this.value)">
+                  <option value="Packaging" ${o.status === 'Packaging' ? 'selected' : ''}>🟡 Packaging & Processing</option>
+                  <option value="Out for Delivery" ${o.status === 'Out for Delivery' ? 'selected' : ''}>🚚 Out for Delivery (Rider Dispatched)</option>
+                  <option value="Delivered" ${o.status === 'Delivered' ? 'selected' : ''}>🟢 Delivered</option>
+                </select>
+              </div>
+              <span class="badge ${o.status === 'Out for Delivery' ? 'badge-OutForDelivery' : 'badge-' + o.status}">
+                Current: ${o.status || 'Packaging'}
+              </span>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        alert('Connection error. Please try again.');
+      }
+    }
+
+    async function updateStatus(ref, newStatus) {
+      try {
+        const res = await fetch('/api/admin/update-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            password: savedPass,
+            reference: ref,
+            status: newStatus
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadOrders();
+        } else {
+          alert('Failed to update status.');
+        }
+      } catch (err) {
+        alert('Error updating status.');
+      }
+    }
+  </script>
+</body>
+</html>
