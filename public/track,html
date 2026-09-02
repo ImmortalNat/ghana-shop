@@ -8,9 +8,14 @@
   <style>
     .timeline { margin: 2rem 0; text-align: left; }
     .step { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; }
-    .circle { width: 32px; height: 32px; border-radius: 50%; background: #dee2e6; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; }
-    .circle.active { background: #0a7e8c; }
+    .circle { width: 34px; height: 34px; border-radius: 50%; background: #dee2e6; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.95rem; flex-shrink: 0; }
+    .circle.active { background: #ff6b35; animation: pulse 1.5s infinite; }
     .circle.done { background: #28a745; }
+    @keyframes pulse {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.4); }
+      70% { transform: scale(1.08); box-shadow: 0 0 0 8px rgba(255, 107, 53, 0); }
+      100% { transform: scale(1); }
+    }
   </style>
 </head>
 <body>
@@ -25,14 +30,14 @@
   <div class="page-container" style="max-width: 600px; margin-top: 3rem;">
     <div style="background: #fff; padding: 2.5rem 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); text-align: center;">
       <h2>📦 Track Your Order</h2>
-      <p style="color: #6c757d; margin: 0.5rem 0 1.5rem;">Enter your Order Reference Code:</p>
+      <p style="color: #6c757d; margin: 0.5rem 0 1.5rem;">Enter your Order Reference Code (e.g. from your SMS / Receipt):</p>
 
-      <form id="trackForm" style="display: flex; gap: 0.5rem;">
-        <input type="text" id="orderRef" placeholder="e.g. jwj3lm0yky" required style="flex:1; padding: 0.8rem; border: 1.5px solid #dee2e6; border-radius: 6px;">
-        <button type="submit" class="btn" style="width: auto; padding: 0.8rem 1.5rem; margin: 0;">Track</button>
+      <form id="trackForm" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+        <input type="text" id="orderRef" placeholder="e.g. jwj3lm0yky" required style="flex:1; padding: 0.8rem; border: 1.5px solid #dee2e6; border-radius: 6px; font-size: 1rem;">
+        <button type="submit" class="btn" style="width: auto; padding: 0.8rem 1.5rem; margin: 0; background: #0a7e8c;">Track</button>
       </form>
 
-      <div id="resultBox" style="display: none; margin-top: 2rem; text-align: left; background: #f8f9fa; padding: 1.5rem; border-radius: 8px;">
+      <div id="resultBox" style="display: none; margin-top: 2rem; text-align: left; background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border: 1px solid #e9ecef;">
         <h3 id="displayStatus" style="color: #0a7e8c; margin-bottom: 0.5rem;"></h3>
         <div id="displayDetails" style="font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.5rem;"></div>
 
@@ -71,35 +76,39 @@
       const displayStatus = document.getElementById('displayStatus');
       const displayDetails = document.getElementById('displayDetails');
 
+      displayStatus.textContent = 'Searching for order...';
+      displayDetails.innerHTML = '';
+      resultBox.style.display = 'block';
+
       try {
         const res = await fetch('/api/orders/' + ref);
         const data = await res.json();
 
         if (data.success) {
           const o = data.order;
-          resultBox.style.display = 'block';
-          displayStatus.textContent = 'Status: ' + o.status;
+          displayStatus.textContent = 'Status: ' + (o.status || 'Processing');
           displayDetails.innerHTML = `
             <strong>Order Code:</strong> ${o.reference}<br>
-            <strong>Customer:</strong> ${o.customerName}<br>
-            <strong>Items:</strong> ${o.items}<br>
-            <strong>Delivery Address:</strong> ${o.address}<br>
+            <strong>Customer:</strong> ${o.customerName || 'Customer'}<br>
+            <strong>Items:</strong> ${o.items || 'Items ordered'}<br>
+            <strong>Delivery Address:</strong> ${o.address || 'Accra, Ghana'}<br>
             <strong>Amount:</strong> GH₵${Number(o.amount).toFixed(2)}
           `;
 
-          // Reset steps
+          // Reset step styling
           ['step1', 'step2', 'step3', 'step4'].forEach(id => {
             document.getElementById(id).className = 'circle';
           });
 
-          // Update timeline based on Live Admin Status
+          // Update timeline based on Live Status
           document.getElementById('step1').className = 'circle done';
-          if (o.status === 'Packaging') {
+          const st = o.status || 'Packaging';
+          if (st === 'Packaging') {
             document.getElementById('step2').className = 'circle active';
-          } else if (o.status === 'Out for Delivery') {
+          } else if (st === 'Out for Delivery') {
             document.getElementById('step2').className = 'circle done';
             document.getElementById('step3').className = 'circle active';
-          } else if (o.status === 'Delivered') {
+          } else if (st === 'Delivered') {
             document.getElementById('step2').className = 'circle done';
             document.getElementById('step3').className = 'circle done';
             document.getElementById('step4').className = 'circle done';
@@ -107,10 +116,12 @@
 
           document.getElementById('waContact').href = `https://wa.me/233536473017?text=${encodeURIComponent('Hi, checking order: ' + o.reference)}`;
         } else {
-          alert('Order not found. Please check your reference code.');
+          displayStatus.textContent = '❌ Order Not Found';
+          displayDetails.innerHTML = 'Please check your reference code and try again.';
         }
       } catch (err) {
-        alert('Error fetching order.');
+        displayStatus.textContent = '❌ Connection Error';
+        displayDetails.innerHTML = 'Unable to check status. Try again later.';
       }
     });
   </script>
