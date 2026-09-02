@@ -3,133 +3,141 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard - Shop with ease</title>
+  <title>Admin AI Manager - Shop with ease</title>
   <link rel="stylesheet" href="/css/styles.css">
   <style>
-    .tab-bar { display: flex; gap: 0.5rem; border-bottom: 2px solid #dee2e6; margin-bottom: 1.5rem; flex-wrap: wrap; }
-    .tab-btn { padding: 0.8rem 1.4rem; background: none; border: none; font-size: 1rem; font-weight: bold; color: #6c757d; cursor: pointer; border-bottom: 3px solid transparent; }
-    .tab-btn.active { color: #0a7e8c; border-color: #0a7e8c; }
-    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.2rem; }
-    .admin-card { background: #fff; padding: 1.2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-    .order-card { background: #fff; border-radius: 8px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 5px solid #0a7e8c; }
+    .tab-bar { display:flex; gap:0.5rem; border-bottom:2px solid #dee2e6; margin-bottom:1.5rem; flex-wrap:wrap; }
+    .tab-btn { padding:0.8rem 1.2rem; background:none; border:none; font-size:0.95rem; font-weight:bold; color:#6c757d; cursor:pointer; border-bottom:3px solid transparent; }
+    .tab-btn.active { color:#0a7e8c; border-color:#0a7e8c; }
+    .card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1.2rem; }
+    .admin-card { background:#fff; padding:1.2rem; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.05); margin-bottom:1.2rem; }
+    .order-card { background:#fff; border-radius:8px; padding:1.2rem; margin-bottom:1rem; box-shadow:0 2px 10px rgba(0,0,0,0.05); border-left:5px solid #0a7e8c; }
     .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; }
     .modal-content { background:#fff; padding:2rem; border-radius:10px; max-width:480px; width:90%; max-height:90vh; overflow-y:auto; }
+    .ai-chat { background:#fff; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.08); overflow:hidden; }
+    .ai-header { background:linear-gradient(135deg,#6f42c1,#0a7e8c); color:#fff; padding:1.2rem 1.5rem; }
+    .ai-messages { height:400px; overflow-y:auto; padding:1.2rem; background:#f8f9fa; }
+    .ai-msg { margin-bottom:1rem; display:flex; gap:0.6rem; }
+    .ai-msg.user { flex-direction:row-reverse; }
+    .ai-bubble { max-width:85%; padding:0.8rem 1rem; border-radius:12px; font-size:0.95rem; line-height:1.5; white-space:pre-wrap; }
+    .ai-msg.bot .ai-bubble { background:#fff; border:1px solid #e9ecef; border-bottom-left-radius:4px; }
+    .ai-msg.user .ai-bubble { background:#0a7e8c; color:#fff; border-bottom-right-radius:4px; }
+    .ai-input-bar { display:flex; gap:0.5rem; padding:1rem; background:#fff; border-top:1px solid #e9ecef; }
+    .ai-input-bar input { flex:1; padding:0.8rem; border:1.5px solid #dee2e6; border-radius:8px; font-size:1rem; }
+    .ai-input-bar button { padding:0.8rem 1.2rem; background:linear-gradient(135deg,#6f42c1,#0a7e8c); color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; }
+    .quick-btns { display:flex; flex-wrap:wrap; gap:0.4rem; padding:0.8rem 1rem; background:#fff; border-top:1px solid #f0f0f0; }
+    .quick-btn { padding:0.3rem 0.7rem; background:#e0f4f4; color:#0a7e8c; border:none; border-radius:20px; font-size:0.8rem; cursor:pointer; font-weight:600; }
+    .quick-btn:hover { background:#0a7e8c; color:#fff; }
   </style>
 </head>
 <body>
   <nav class="navbar">
-    <a href="/" class="navbar-brand">🛡️ Admin <span>Manager</span></a>
-    <ul class="navbar-links"><li><a href="/" target="_blank">👁️ View Live Store</a></li></ul>
+    <a href="/" class="navbar-brand">🛡️ Admin <span>AI Hub</span></a>
+    <ul class="navbar-links"><li><a href="/" target="_blank">👁️ View Store</a></li></ul>
   </nav>
 
-  <div class="page-container" style="max-width: 950px; margin-top: 2rem;">
-    <!-- Login Screen -->
-    <div id="loginBox" style="max-width: 380px; margin: 4rem auto; background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center;">
+  <div class="page-container" style="max-width:950px; margin-top:2rem;">
+    <div id="loginBox" style="max-width:380px; margin:4rem auto; background:#fff; padding:2rem; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.05); text-align:center;">
       <h3>🔐 Admin Login</h3>
-      <input type="password" id="adminPass" placeholder="Password (admin123)" style="width: 100%; padding: 0.8rem; margin: 1rem 0; border: 1.5px solid #ddd; border-radius: 6px;">
-      <button class="btn" onclick="initDashboard()" style="background: #0a7e8c;">Unlock Dashboard</button>
+      <input type="password" id="adminPass" placeholder="Password" style="width:100%; padding:0.8rem; margin:1rem 0; border:1.5px solid #ddd; border-radius:6px;">
+      <button class="btn" onclick="initDashboard()" style="background:#0a7e8c;">Unlock Dashboard</button>
     </div>
 
-    <!-- Main Dashboard -->
-    <div id="dashboard" style="display: none;">
+    <div id="dashboard" style="display:none;">
       <div class="tab-bar">
-        <button class="tab-btn active" onclick="switchTab('productsTab', this)">🛍️ Manage Products</button>
-        <button class="tab-btn" onclick="switchTab('ordersTab', this)">📦 Customer Orders</button>
-        <button class="tab-btn" onclick="switchTab('settingsTab', this)">⚙️ Store Branding</button>
+        <button class="tab-btn active" onclick="switchTab('aiTab',this)">🤖 AI Manager</button>
+        <button class="tab-btn" onclick="switchTab('productsTab',this)">🛍️ Products</button>
+        <button class="tab-btn" onclick="switchTab('ordersTab',this)">📦 Orders</button>
+        <button class="tab-btn" onclick="switchTab('storefrontTab',this)">🎨 Storefront</button>
       </div>
 
-      <!-- TAB 1: PRODUCTS -->
-      <div id="productsTab">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
-          <h3>All Store Products</h3>
-          <button class="btn" style="width: auto; background: #28a745; padding: 0.6rem 1.2rem;" onclick="openProductModal()">➕ Upload New Product</button>
+      <!-- AI CHAT TAB -->
+      <div id="aiTab">
+        <div class="ai-chat">
+          <div class="ai-header">
+            <h3 style="margin:0;">🤖 AI Store Manager</h3>
+            <p style="margin:0.3rem 0 0; font-size:0.85rem; opacity:0.9;">Tell me what you want to change. I will do it instantly!</p>
+          </div>
+          <div class="ai-messages" id="aiMessages">
+            <div class="ai-msg bot">
+              <div class="ai-bubble">Hello! 👋 I'm your AI Store Manager. I can modify ANYTHING on your website instantly.\n\nTry typing:\n• "Change store name to K-Store"\n• "Add product iPhone 15 for 8500"\n• "Update about us to say we sell phones"\n• "Generate social media post"\n\nOr just type "help" to see all commands! 😊</div>
+            </div>
+          </div>
+          <div class="quick-btns">
+            <button class="quick-btn" onclick="sendQuick('help')">❓ Help</button>
+            <button class="quick-btn" onclick="sendQuick('List all products')">📦 List Products</button>
+            <button class="quick-btn" onclick="sendQuick('Show current settings')">⚙️ Settings</button>
+            <button class="quick-btn" onclick="sendQuick('Generate social media post')">📱 Social Post</button>
+            <button class="quick-btn" onclick="sendQuick('Draft WhatsApp customer message')">💬 WhatsApp Msg</button>
+          </div>
+          <div class="ai-input-bar">
+            <input type="text" id="aiInput" placeholder='Type a command... e.g. "Change store name to K-Store"' onkeypress="if(event.key==='Enter')sendAiMessage()">
+            <button onclick="sendAiMessage()">Send ✨</button>
+          </div>
         </div>
-        <div class="card-grid" id="productsList">Loading products...</div>
       </div>
 
-      <!-- TAB 2: ORDERS -->
-      <div id="ordersTab" style="display: none;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-          <h3>Customer Orders & Deliveries</h3>
-          <button class="btn" style="width: auto; padding: 0.5rem 1rem; background: #6c757d;" onclick="loadOrders()">🔄 Refresh Orders</button>
+      <!-- PRODUCTS TAB -->
+      <div id="productsTab" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:0.5rem;">
+          <h3>Product Catalog</h3>
+          <button class="btn" style="width:auto; background:#28a745; padding:0.6rem 1.2rem;" onclick="openProductModal()">➕ Upload Product</button>
         </div>
-        <div id="ordersList">Loading orders...</div>
+        <div class="card-grid" id="productsList">Loading...</div>
       </div>
 
-      <!-- TAB 3: STORE SETTINGS -->
-      <div id="settingsTab" style="display: none;">
-        <div class="admin-card" style="max-width: 600px;">
-          <h3>⚙️ Store Branding & Details</h3>
-          <form id="settingsForm" onsubmit="saveSettings(event)" style="margin-top: 1rem;">
-            <div class="form-group">
-              <label>Store Name (Navbar)</label>
-              <input type="text" id="setStoreName" required>
-            </div>
-            <div class="form-group">
-              <label>Hero Title (Main Banner)</label>
-              <input type="text" id="setHeroTitle" required>
-            </div>
-            <div class="form-group">
-              <label>Hero Subtitle (Description)</label>
-              <input type="text" id="setHeroSubtitle" required>
-            </div>
-            <div class="form-group">
-              <label>WhatsApp Number (with country code e.g. 233536473017)</label>
-              <input type="text" id="setWhatsappNumber" required>
-            </div>
-            <button type="submit" class="btn" style="background: #0a7e8c; margin-top: 1rem;">💾 Save Settings</button>
-          </form>
+      <!-- ORDERS TAB -->
+      <div id="ordersTab" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+          <h3>Customer Orders</h3>
+          <button class="btn" style="width:auto; padding:0.5rem 1rem; background:#6c757d;" onclick="loadOrders()">🔄 Refresh</button>
         </div>
+        <div id="ordersList">Loading...</div>
+      </div>
+
+      <!-- STOREFRONT TAB -->
+      <div id="storefrontTab" style="display:none;">
+        <form id="storefrontForm" onsubmit="saveStorefront(event)">
+          <div class="admin-card">
+            <h3>🏷️ Store Name & Banner</h3>
+            <div class="form-group"><label>Store Name</label><input type="text" id="setStoreName" required></div>
+            <div class="form-group"><label>Hero Title</label><input type="text" id="setHeroTitle" required></div>
+            <div class="form-group"><label>Hero Subtitle</label><input type="text" id="setHeroSubtitle" required></div>
+            <div class="form-group"><label>Announcement Bar</label><input type="text" id="setAnnouncement"></div>
+          </div>
+          <div class="admin-card">
+            <h3>📖 About Us</h3>
+            <div class="form-group"><label>Title</label><input type="text" id="setAboutTitle"></div>
+            <div class="form-group"><label>Story</label><textarea id="setAboutText" rows="4" style="width:100%; padding:0.8rem; border:1px solid #ddd; border-radius:6px;"></textarea></div>
+            <div class="form-group"><label>About Photo</label><input type="file" accept="image/*" onchange="handleAboutImg(event)" style="width:100%; padding:0.6rem; border:1.5px dashed #0a7e8c; border-radius:6px;"><input type="hidden" id="setAboutImgB64"><img id="aboutPrev" src="" style="display:none; width:120px; height:80px; object-fit:cover; border-radius:6px; margin-top:0.5rem;"></div>
+          </div>
+          <div class="admin-card">
+            <h3>📍 Contact</h3>
+            <div class="form-group"><label>WhatsApp (e.g. 233536473017)</label><input type="text" id="setWhatsapp" required></div>
+            <div class="form-group"><label>Phone</label><input type="text" id="setPhone"></div>
+            <div class="form-group"><label>Email</label><input type="email" id="setEmail"></div>
+            <div class="form-group"><label>Address</label><input type="text" id="setAddress"></div>
+          </div>
+          <button type="submit" class="btn" style="background:#0a7e8c; padding:0.9rem; margin-bottom:3rem;">💾 Save All Changes</button>
+        </form>
       </div>
     </div>
   </div>
 
-  <!-- Add/Edit Product Modal -->
+  <!-- Product Modal -->
   <div class="modal" id="prodModal">
     <div class="modal-content">
       <h3 id="modalTitle">Upload Product</h3>
-      <form id="productForm" onsubmit="saveProduct(event)" style="margin-top: 1rem;">
-        <input type="hidden" id="prodId">
-        <input type="hidden" id="prodImageBase64">
-
-        <div class="form-group">
-          <label>Product Name *</label>
-          <input type="text" id="prodName" required placeholder="e.g. Wireless Headphones">
-        </div>
-
-        <div class="form-group">
-          <label>Price in GH₵ *</label>
-          <input type="number" step="0.01" id="prodPrice" required placeholder="e.g. 250">
-        </div>
-
-        <div class="form-group">
-          <label>Category *</label>
-          <select id="prodCategory" required style="width: 100%; padding: 0.7rem; border-radius: 6px; border: 1px solid #ddd;">
-            <option value="Electronics">Electronics</option>
-            <option value="Fashion">Fashion</option>
-            <option value="Home">Home</option>
-            <option value="Beauty">Beauty</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-
-        <!-- Direct File Upload -->
-        <div class="form-group">
-          <label>Upload Product Photo * (From Camera / Files / Photos)</label>
-          <input type="file" id="prodFile" accept="image/*" onchange="handleImageUpload(event)" style="width: 100%; padding: 0.6rem; border: 1.5px dashed #0a7e8c; border-radius: 6px; background: #f8f9fa;">
-          <div style="margin-top: 0.5rem; text-align: center;">
-            <img id="imgPreview" src="" style="display: none; width: 120px; height: 120px; object-fit: cover; border-radius: 8px; margin: 0.5rem auto; border: 1px solid #ddd;">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Description</label>
-          <textarea id="prodDesc" rows="3" style="width: 100%; padding: 0.7rem; border-radius: 6px; border: 1px solid #ddd;"></textarea>
-        </div>
-
-        <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
-          <button type="submit" class="btn" id="saveProdBtn" style="background: #28a745;">Save Product</button>
-          <button type="button" class="btn" style="background: #6c757d;" onclick="closeProductModal()">Cancel</button>
+      <form id="productForm" onsubmit="saveProduct(event)" style="margin-top:1rem;">
+        <input type="hidden" id="prodId"><input type="hidden" id="prodImgB64">
+        <div class="form-group"><label>Name *</label><input type="text" id="prodName" required></div>
+        <div class="form-group"><label>Price GH₵ *</label><input type="number" step="0.01" id="prodPrice" required></div>
+        <div class="form-group"><label>Category</label><select id="prodCat" style="width:100%; padding:0.7rem; border-radius:6px; border:1px solid #ddd;"><option>Electronics</option><option>Fashion</option><option>Home</option><option>Beauty</option><option>Other</option></select></div>
+        <div class="form-group"><label>Photo *</label><input type="file" accept="image/*" onchange="handleProdImg(event)" style="width:100%; padding:0.6rem; border:1.5px dashed #0a7e8c; border-radius:6px;"><img id="prodPrev" src="" style="display:none; width:100px; height:100px; object-fit:cover; border-radius:6px; margin-top:0.5rem;"></div>
+        <div class="form-group"><label>Description</label><textarea id="prodDesc" rows="2" style="width:100%; padding:0.7rem; border-radius:6px; border:1px solid #ddd;"></textarea></div>
+        <div style="display:flex; gap:0.5rem; margin-top:1rem;">
+          <button type="submit" class="btn" id="saveProdBtn" style="background:#28a745;">Save</button>
+          <button type="button" class="btn" style="background:#6c757d;" onclick="closeProdModal()">Cancel</button>
         </div>
       </form>
     </div>
@@ -138,243 +146,118 @@
   <script>
     let savedPass = '';
 
-    function switchTab(tabId, btn) {
+    function switchTab(id, btn) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      ['productsTab', 'ordersTab', 'settingsTab'].forEach(t => {
-        document.getElementById(t).style.display = (t === tabId) ? 'block' : 'none';
-      });
-      if (tabId === 'ordersTab') loadOrders();
-      if (tabId === 'settingsTab') loadSettings();
+      ['aiTab','productsTab','ordersTab','storefrontTab'].forEach(t => document.getElementById(t).style.display = t === id ? 'block' : 'none');
+      if (id === 'productsTab') loadProducts();
+      if (id === 'ordersTab') loadOrders();
+      if (id === 'storefrontTab') loadSettings();
     }
 
     async function initDashboard() {
       savedPass = document.getElementById('adminPass').value;
-      const res = await fetch('/api/admin/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: savedPass })
-      });
-      const data = await res.json();
-      if (!data.success) return alert(data.message || 'Incorrect Password');
-
+      const r = await fetch('/api/admin/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:savedPass}) });
+      const d = await r.json();
+      if (!d.success) return alert(d.message || 'Wrong password');
       document.getElementById('loginBox').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
-      loadProducts();
     }
 
-    // ================= IMAGE COMPRESSOR & PREVIEW =================
-    function handleImageUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          const max_size = 600; // Resize image so it uploads fast
-
-          if (width > height) {
-            if (width > max_size) {
-              height *= max_size / width;
-              width = max_size;
-            }
-          } else {
-            if (height > max_size) {
-              width *= max_size / height;
-              height = max_size;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
-          document.getElementById('prodImageBase64').value = compressedBase64;
-          
-          const preview = document.getElementById('imgPreview');
-          preview.src = compressedBase64;
-          preview.style.display = 'block';
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
+    // ================= AI CHAT =================
+    function addChatMsg(text, isUser) {
+      const box = document.getElementById('aiMessages');
+      const div = document.createElement('div');
+      div.className = 'ai-msg ' + (isUser ? 'user' : 'bot');
+      div.innerHTML = `<div class="ai-bubble">${text}</div>`;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
     }
+
+    async function sendAiMessage() {
+      const input = document.getElementById('aiInput');
+      const msg = input.value.trim();
+      if (!msg) return;
+      input.value = '';
+      addChatMsg(msg, true);
+      addChatMsg('⏳ Thinking...', false);
+
+      const r = await fetch('/api/admin/ai/chat', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ password:savedPass, message:msg })
+      });
+      const d = await r.json();
+
+      const msgs = document.getElementById('aiMessages');
+      msgs.removeChild(msgs.lastChild);
+      addChatMsg(d.reply || 'Sorry, I could not process that.', false);
+
+      if (d.action === 'executed') {
+        loadProducts();
+        loadSettings();
+      }
+    }
+
+    function sendQuick(msg) {
+      document.getElementById('aiInput').value = msg;
+      sendAiMessage();
+    }
+
+    // ================= IMAGE HELPERS =================
+    function compressImg(file, cb) {
+      const r = new FileReader();
+      r.onload = e => { const i = new Image(); i.onload = () => { const c = document.createElement('canvas'); let w=i.width, h=i.height; if(w>h){if(w>600){h*=600/w;w=600;}}else{if(h>600){w*=600/h;h=600;}} c.width=w;c.height=h;c.getContext('2d').drawImage(i,0,0,w,h);cb(c.toDataURL('image/jpeg',0.8)); }; i.src=e.target.result; }; r.readAsDataURL(file);
+    }
+    function handleProdImg(e) { const f=e.target.files[0]; if(!f)return; compressImg(f,b=>{document.getElementById('prodImgB64').value=b;const p=document.getElementById('prodPrev');p.src=b;p.style.display='block';}); }
+    function handleAboutImg(e) { const f=e.target.files[0]; if(!f)return; compressImg(f,b=>{document.getElementById('setAboutImgB64').value=b;const p=document.getElementById('aboutPrev');p.src=b;p.style.display='block';}); }
 
     // ================= PRODUCTS =================
     async function loadProducts() {
-      const res = await fetch('/api/products');
-      const products = await res.json();
-      const list = document.getElementById('productsList');
-      if (products.length === 0) return list.innerHTML = '<p>No products in store. Add one!</p>';
-
-      list.innerHTML = products.map(p => `
-        <div class="admin-card">
-          <img src="${p.image}" style="width:100%; height:160px; object-fit:cover; border-radius:6px;">
-          <h4 style="margin:0.5rem 0 0.2rem;">${p.name}</h4>
-          <span style="color:#0a7e8c; font-weight:bold; font-size:1.1rem;">GH₵${Number(p.price).toFixed(2)}</span>
-          <p style="color:#6c757d; font-size:0.85rem; margin:0.3rem 0 0.8rem;">${p.description || ''}</p>
-          <div style="display:flex; gap:0.5rem;">
-            <button class="btn" style="padding:0.4rem; background:#0a7e8c;" onclick='editProduct(${JSON.stringify(p)})'>✏️ Edit</button>
-            <button class="btn" style="padding:0.4rem; background:#dc3545;" onclick="deleteProduct(${p.id})">🗑️ Delete</button>
-          </div>
-        </div>
-      `).join('');
+      const r = await fetch('/api/products'); const ps = await r.json();
+      const box = document.getElementById('productsList');
+      if(!ps.length) return box.innerHTML='<p>No products.</p>';
+      box.innerHTML = ps.map(p=>`<div class="admin-card"><img src="${p.image}" style="width:100%;height:150px;object-fit:cover;border-radius:6px;"><h4 style="margin:0.5rem 0 0.2rem;">${p.name}</h4><span style="color:#0a7e8c;font-weight:bold;">GH₵${Number(p.price).toFixed(2)}</span><p style="color:#6c757d;font-size:0.85rem;">${p.description||''}</p><div style="display:flex;gap:0.5rem;"><button class="btn" style="padding:0.4rem;background:#0a7e8c;" onclick='editProd(${JSON.stringify(p)})'>✏️</button><button class="btn" style="padding:0.4rem;background:#dc3545;" onclick="delProd(${p.id})">🗑️</button></div></div>`).join('');
     }
-
-    function openProductModal() {
-      document.getElementById('modalTitle').textContent = 'Upload New Product';
-      document.getElementById('prodId').value = '';
-      document.getElementById('prodName').value = '';
-      document.getElementById('prodPrice').value = '';
-      document.getElementById('prodDesc').value = '';
-      document.getElementById('prodImageBase64').value = '';
-      document.getElementById('prodFile').value = '';
-      document.getElementById('imgPreview').style.display = 'none';
-      document.getElementById('prodModal').style.display = 'flex';
-    }
-
-    function closeProductModal() {
-      document.getElementById('prodModal').style.display = 'none';
-    }
-
-    function editProduct(p) {
-      document.getElementById('modalTitle').textContent = 'Edit Product';
-      document.getElementById('prodId').value = p.id;
-      document.getElementById('prodName').value = p.name;
-      document.getElementById('prodPrice').value = p.price;
-      document.getElementById('prodCategory').value = p.category || 'Electronics';
-      document.getElementById('prodImageBase64').value = p.image;
-      document.getElementById('prodDesc').value = p.description || '';
-      
-      const preview = document.getElementById('imgPreview');
-      preview.src = p.image;
-      preview.style.display = 'block';
-      document.getElementById('prodModal').style.display = 'flex';
-    }
-
+    function openProductModal() { document.getElementById('modalTitle').textContent='Upload Product'; ['prodId','prodName','prodPrice','prodDesc','prodImgB64'].forEach(id=>document.getElementById(id).value=''); document.getElementById('prodPrev').style.display='none'; document.getElementById('prodModal').style.display='flex'; }
+    function closeProdModal() { document.getElementById('prodModal').style.display='none'; }
+    function editProd(p) { document.getElementById('modalTitle').textContent='Edit Product'; document.getElementById('prodId').value=p.id; document.getElementById('prodName').value=p.name; document.getElementById('prodPrice').value=p.price; document.getElementById('prodCat').value=p.category||'Electronics'; document.getElementById('prodImgB64').value=p.image; document.getElementById('prodDesc').value=p.description||''; const pv=document.getElementById('prodPrev');pv.src=p.image;pv.style.display='block'; document.getElementById('prodModal').style.display='flex'; }
     async function saveProduct(e) {
-      e.preventDefault();
-      const image = document.getElementById('prodImageBase64').value;
-      if (!image) {
-        return alert('Please select a photo for the product.');
-      }
-
-      const saveBtn = document.getElementById('saveProdBtn');
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving...';
-
-      const product = {
-        id: document.getElementById('prodId').value,
-        name: document.getElementById('prodName').value,
-        price: document.getElementById('prodPrice').value,
-        category: document.getElementById('prodCategory').value,
-        image: image,
-        description: document.getElementById('prodDesc').value
-      };
-
-      const res = await fetch('/api/admin/products/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: savedPass, product })
-      });
-      const data = await res.json();
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Save Product';
-
-      if (data.success) {
-        closeProductModal();
-        loadProducts();
-      } else {
-        alert(data.message || 'Error saving product');
-      }
+      e.preventDefault(); const img=document.getElementById('prodImgB64').value; if(!img) return alert('Select a photo');
+      const btn=document.getElementById('saveProdBtn'); btn.disabled=true; btn.textContent='Saving...';
+      await fetch('/api/admin/products/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:savedPass,product:{id:document.getElementById('prodId').value,name:document.getElementById('prodName').value,price:document.getElementById('prodPrice').value,category:document.getElementById('prodCat').value,image:img,description:document.getElementById('prodDesc').value}})});
+      btn.disabled=false; btn.textContent='Save'; closeProdModal(); loadProducts();
     }
-
-    async function deleteProduct(id) {
-      if (!confirm('Are you sure you want to delete this product?')) return;
-      const res = await fetch('/api/admin/products/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: savedPass, productId: id })
-      });
-      const data = await res.json();
-      if (data.success) loadProducts();
-    }
+    async function delProd(id) { if(!confirm('Delete this product?'))return; await fetch('/api/admin/products/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:savedPass,productId:id})}); loadProducts(); }
 
     // ================= ORDERS =================
     async function loadOrders() {
-      const res = await fetch('/api/admin/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: savedPass })
-      });
-      const data = await res.json();
-      const box = document.getElementById('ordersList');
-      if (data.orders.length === 0) return box.innerHTML = '<p>No orders yet.</p>';
-
-      box.innerHTML = data.orders.map(o => `
-        <div class="order-card">
-          <div style="display:flex; justify-content:space-between;">
-            <strong>Ref: ${o.reference}</strong>
-            <strong style="color:#0a7e8c;">GH₵${Number(o.amount).toFixed(2)}</strong>
-          </div>
-          <div style="background:#f8f9fa; padding:0.8rem; margin:0.8rem 0; border-radius:6px; font-size:0.9rem;">
-            👤 <b>Customer:</b> ${o.customerName} (${o.customerEmail})<br>
-            📞 <b>Phone:</b> <a href="tel:${o.phone}">${o.phone}</a> | <a href="https://wa.me/233${(o.phone || '').replace(/^0/, '')}" target="_blank" style="color:#25D366; font-weight:bold;">💬 WhatsApp</a><br>
-            📍 <b>Address:</b> ${o.address}<br>
-            🛍️ <b>Items:</b> ${o.items}
-          </div>
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <select style="padding:0.4rem; font-weight:bold;" onchange="updateStatus('${o.reference}', this.value)">
-              <option value="Packaging" ${o.status === 'Packaging' ? 'selected' : ''}>🟡 Packaging</option>
-              <option value="Out for Delivery" ${o.status === 'Out for Delivery' ? 'selected' : ''}>🚚 Out for Delivery</option>
-              <option value="Delivered" ${o.status === 'Delivered' ? 'selected' : ''}>🟢 Delivered</option>
-            </select>
-            <span style="font-weight:bold; color:#0a7e8c;">Current: ${o.status}</span>
-          </div>
-        </div>
-      `).join('');
+      const r = await fetch('/api/admin/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:savedPass})});
+      const d = await r.json(); const box=document.getElementById('ordersList');
+      if(!d.orders.length) return box.innerHTML='<p>No orders yet.</p>';
+      box.innerHTML=d.orders.map(o=>`<div class="order-card"><div style="display:flex;justify-content:space-between;"><strong>Ref: ${o.reference}</strong><strong style="color:#0a7e8c;">GH₵${Number(o.amount).toFixed(2)}</strong></div><div style="background:#f8f9fa;padding:0.8rem;margin:0.8rem 0;border-radius:6px;font-size:0.9rem;">👤 ${o.customerName} (${o.customerEmail})<br>📞 <a href="https://wa.me/233${(o.phone||'').replace(/^0/,'')}" target="_blank" style="color:#25D366;font-weight:bold;">💬 WhatsApp ${o.phone}</a><br>📍 ${o.address}<br>🛍️ ${o.items}</div><select style="padding:0.4rem;font-weight:bold;" onchange="updateSt('${o.reference}',this.value)"><option value="Packaging" ${o.status==='Packaging'?'selected':''}>🟡 Packaging</option><option value="Out for Delivery" ${o.status==='Out for Delivery'?'selected':''}>🚚 Out for Delivery</option><option value="Delivered" ${o.status==='Delivered'?'selected':''}>🟢 Delivered</option></select></div>`).join('');
     }
-
-    async function updateStatus(ref, st) {
-      await fetch('/api/admin/update-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: savedPass, reference: ref, status: st })
-      });
-      loadOrders();
-    }
+    async function updateSt(ref,st) { await fetch('/api/admin/update-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:savedPass,reference:ref,status:st})}); loadOrders(); }
 
     // ================= SETTINGS =================
     async function loadSettings() {
-      const res = await fetch('/api/settings');
-      const s = await res.json();
-      document.getElementById('setStoreName').value = s.storeName || '';
-      document.getElementById('setHeroTitle').value = s.heroTitle || '';
-      document.getElementById('setHeroSubtitle').value = s.heroSubtitle || '';
-      document.getElementById('setWhatsappNumber').value = s.whatsappNumber || '';
+      const r=await fetch('/api/settings'); const s=await r.json();
+      document.getElementById('setStoreName').value=s.storeName||'';
+      document.getElementById('setHeroTitle').value=s.heroTitle||'';
+      document.getElementById('setHeroSubtitle').value=s.heroSubtitle||'';
+      document.getElementById('setAnnouncement').value=s.announcement||'';
+      document.getElementById('setAboutTitle').value=s.aboutTitle||'';
+      document.getElementById('setAboutText').value=s.aboutText||'';
+      document.getElementById('setWhatsapp').value=s.whatsappNumber||'';
+      document.getElementById('setPhone').value=s.supportPhone||'';
+      document.getElementById('setEmail').value=s.supportEmail||'';
+      document.getElementById('setAddress').value=s.shopAddress||'';
+      if(s.aboutImage){document.getElementById('setAboutImgB64').value=s.aboutImage;const p=document.getElementById('aboutPrev');p.src=s.aboutImage;p.style.display='block';}
     }
-
-    async function saveSettings(e) {
+    async function saveStorefront(e) {
       e.preventDefault();
-      const settings = {
-        storeName: document.getElementById('setStoreName').value,
-        heroTitle: document.getElementById('setHeroTitle').value,
-        heroSubtitle: document.getElementById('setHeroSubtitle').value,
-        whatsappNumber: document.getElementById('setWhatsappNumber').value
-      };
-      const res = await fetch('/api/admin/settings/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: savedPass, settings })
-      });
-      const data = await res.json();
-      if (data.success) alert('Store settings updated successfully! 🚀');
+      const s={storeName:document.getElementById('setStoreName').value,heroTitle:document.getElementById('setHeroTitle').value,heroSubtitle:document.getElementById('setHeroSubtitle').value,announcement:document.getElementById('setAnnouncement').value,aboutTitle:document.getElementById('setAboutTitle').value,aboutText:document.getElementById('setAboutText').value,aboutImage:document.getElementById('setAboutImgB64').value,whatsappNumber:document.getElementById('setWhatsapp').value,supportPhone:document.getElementById('setPhone').value,supportEmail:document.getElementById('setEmail').value,shopAddress:document.getElementById('setAddress').value};
+      const r=await fetch('/api/admin/settings/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:savedPass,settings:s})});
+      const d=await r.json(); if(d.success) alert('Storefront saved! 🚀');
     }
   </script>
 </body>
