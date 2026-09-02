@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const axios = require('axios');
 const paymentRoutes = require('./routes/payment');
 
 const app = express();
@@ -11,19 +12,30 @@ const ORDERS_FILE = path.join(__dirname, 'orders.json');
 
 // Ensure orders file exists
 if (!fs.existsSync(ORDERS_FILE)) {
-  fs.writeFileSync(ORDERS_FILE, JSON.stringify([]));
+  try {
+    fs.writeFileSync(ORDERS_FILE, JSON.stringify([]));
+  } catch (e) {
+    console.error('Could not create orders.json:', e.message);
+  }
 }
 
 function getOrders() {
   try {
-    return JSON.parse(fs.readFileSync(ORDERS_FILE, 'utf8'));
+    if (fs.existsSync(ORDERS_FILE)) {
+      return JSON.parse(fs.readFileSync(ORDERS_FILE, 'utf8') || '[]');
+    }
   } catch (e) {
     return [];
   }
+  return [];
 }
 
 function saveOrders(orders) {
-  fs.writeFileSync(ORDERS_FILE, JSON.stringify(orders, null, 2));
+  try {
+    fs.writeFileSync(ORDERS_FILE, JSON.stringify(orders, null, 2));
+  } catch (e) {
+    console.error('Error saving orders:', e.message);
+  }
 }
 
 app.use(cors());
@@ -33,7 +45,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.use('/api/payment', paymentRoutes);
 
-// Catalog in GHS
+// Product Catalog
 const products = [
   { id: 1, name: "Wireless Headphones", price: 250, image: "https://picsum.photos/id/1/400/300", description: "Premium noise cancellation headphones", category: "Electronics" },
   { id: 2, name: "Smart Watch", price: 380, image: "https://picsum.photos/id/2/400/300", description: "Health monitoring smartwatch", category: "Electronics" },
@@ -47,18 +59,50 @@ app.get('/api/products', (req, res) => res.json(products));
 
 // ==================== ORDER MANAGEMENT API ====================
 
-// 1. Customer checks order status by Reference
-app.get('/api/orders/:ref', (req, res) => {
+// 1. Customer checks order status (Searches local DB first, then Paystack API directly!)
+app.get('/api/orders/:ref', async (req, res) => {
+  const ref = req.params.ref.trim();
   const orders = getOrders();
-  const order = orders.find(o => o.reference === req.params.ref);
+  let order = orders.find(o => o.reference.toLowerCase() === ref.toLowerCase());
+
   if (order) {
-    res.json({ success: true, order });
-  } else {
-    res.status(404).json({ success: false, message: 'Order not found' });
+    return res.json({ success: true, order });
   }
+
+  // Fallback: Check Paystack directly for any order
+  try {
+    const paystackSecret = (process.env.PAYSTACK_SECRET_KEY || '').trim();
+    const paystackRes = await axios.get(
+      `https://api.paystack.co/transaction/verify/${ref}`,
+      { headers: { Authorization: `Bearer ${paystackSecret}` } }
+    );
+
+    if (paystackRes.data.status && paystackRes.data.data.status === 'success') {
+      const tx = paystackRes.data.data;
+      const newOrder = {
+        reference: tx.reference,
+        amount: tx.amount / 100,
+        customerEmail: tx.customer.email,
+        customerName: tx.metadata?.customerName || tx.customer.email,
+        phone: tx.metadata?.phone || 'N/A',
+        address: tx.metadata?.address || 'N/A',
+        items: tx.metadata?.itemsSummary || 'Order Item(s)',
+        status: 'Packaging',
+        paidAt: tx.paid_at || new Date().toISOString()
+      };
+
+      orders.push(newOrder);
+      saveOrders(orders);
+      return res.json({ success: true, order: newOrder });
+    }
+  } catch (err) {
+    console.error('Paystack verification fallback error:', err.response?.data?.message || err.message);
+  }
+
+  res.status(404).json({ success: false, message: 'Order not found' });
 });
 
-// 2. Admin gets all orders (Password protected: admin123)
+// 2. Admin gets all orders (Password: admin123)
 app.post('/api/admin/orders', (req, res) => {
   const { password } = req.body;
   const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
@@ -77,9 +121,9 @@ app.post('/api/admin/update-status', (req, res) => {
   }
 
   const orders = getOrders();
-  const order = orders.find(o => o.reference === reference);
+  const order = orders.find(o => o.reference.toLowerCase() === reference.toLowerCase());
   if (order) {
-    order.status = status; // 'Paid' | 'Packaging' | 'Out for Delivery' | 'Delivered'
+    order.status = status; // 'Packaging' | 'Out for Delivery' | 'Delivered'
     order.updatedAt = new Date().toISOString();
     saveOrders(orders);
     return res.json({ success: true, message: 'Status updated to ' + status });
@@ -87,25 +131,14 @@ app.post('/api/admin/update-status', (req, res) => {
   res.status(404).json({ success: false, message: 'Order not found' });
 });
 
-// Save order helper (called from payment verify)
-app.saveNewOrder = function(orderData) {
-  const orders = getOrders();
-  if (!orders.find(o => o.reference === orderData.reference)) {
-    orders.push({
-      ...orderData,
-      status: 'Packaging', // Default initial status
-      createdAt: new Date().toISOString()
-    });
-    saveOrders(orders);
-  }
-};
-
-// Pages
+// ==================== PAGE ROUTES ====================
 app.get('/cart', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'cart.html')));
 app.get('/checkout', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'checkout.html')));
 app.get('/success', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'success.html')));
 app.get('/track', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'track.html')));
+app.get('/track.html', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'track.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'admin.html')));
+app.get('/admin.html', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'admin.html')));
 
 app.listen(PORT, () => {
   console.log("====================================================");
