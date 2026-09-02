@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Track Your Order - Shop with ease</title>
   <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .timeline { margin: 2rem 0; text-align: left; }
+    .step { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; }
+    .circle { width: 32px; height: 32px; border-radius: 50%; background: #dee2e6; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; }
+    .circle.active { background: #0a7e8c; }
+    .circle.done { background: #28a745; }
+  </style>
 </head>
 <body>
   <nav class="navbar">
@@ -16,9 +23,9 @@
   </nav>
 
   <div class="page-container" style="max-width: 600px; margin-top: 3rem;">
-    <div style="background: #fff; padding: 2.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); text-align: center;">
+    <div style="background: #fff; padding: 2.5rem 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); text-align: center;">
       <h2>📦 Track Your Order</h2>
-      <p style="color: #6c757d; margin: 0.5rem 0 1.5rem;">Enter your Order Reference Code (from your payment receipt/SMS):</p>
+      <p style="color: #6c757d; margin: 0.5rem 0 1.5rem;">Enter your Order Reference Code:</p>
 
       <form id="trackForm" style="display: flex; gap: 0.5rem;">
         <input type="text" id="orderRef" placeholder="e.g. jwj3lm0yky" required style="flex:1; padding: 0.8rem; border: 1.5px solid #dee2e6; border-radius: 6px;">
@@ -26,10 +33,31 @@
       </form>
 
       <div id="resultBox" style="display: none; margin-top: 2rem; text-align: left; background: #f8f9fa; padding: 1.5rem; border-radius: 8px;">
-        <h4 id="orderStatusHeader" style="color: #28a745; margin-bottom: 0.5rem;">✅ Order Found</h4>
-        <p id="orderDetailsText" style="font-size: 0.9rem; line-height: 1.6;"></p>
+        <h3 id="displayStatus" style="color: #0a7e8c; margin-bottom: 0.5rem;"></h3>
+        <div id="displayDetails" style="font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.5rem;"></div>
+
+        <!-- Live Step Timeline -->
+        <div class="timeline">
+          <div class="step">
+            <div class="circle done" id="step1">✓</div>
+            <div><strong>1. Order Confirmed & Paid</strong></div>
+          </div>
+          <div class="step">
+            <div class="circle" id="step2">2</div>
+            <div><strong>2. Packaging & Processing</strong></div>
+          </div>
+          <div class="step">
+            <div class="circle" id="step3">3</div>
+            <div><strong>3. Out for Delivery (Rider Dispatched)</strong></div>
+          </div>
+          <div class="step">
+            <div class="circle" id="step4">4</div>
+            <div><strong>4. Delivered</strong></div>
+          </div>
+        </div>
+
         <a id="waContact" href="#" target="_blank" class="btn" style="background:#25D366; display:block; text-align:center; text-decoration:none; margin-top:1rem;">
-          💬 Chat with Dispatch Rider on WhatsApp
+          💬 Chat with Us on WhatsApp
         </a>
       </div>
     </div>
@@ -40,31 +68,49 @@
       e.preventDefault();
       const ref = document.getElementById('orderRef').value.trim();
       const resultBox = document.getElementById('resultBox');
-      const details = document.getElementById('orderDetailsText');
-      const waBtn = document.getElementById('waContact');
-
-      details.innerHTML = 'Searching for order...';
-      resultBox.style.display = 'block';
+      const displayStatus = document.getElementById('displayStatus');
+      const displayDetails = document.getElementById('displayDetails');
 
       try {
-        const res = await fetch('/api/payment/verify/' + ref);
+        const res = await fetch('/api/orders/' + ref);
         const data = await res.json();
 
-        if (data.status && data.data.status === 'success') {
-          const tx = data.data;
-          details.innerHTML = `
-            <strong>Reference:</strong> ${tx.reference}<br>
-            <strong>Status:</strong> <span style="color:#28a745; font-weight:bold;">Packaging & Preparing Dispatch</span><br>
-            <strong>Amount:</strong> GH₵${(tx.amount/100).toFixed(2)}<br>
-            <strong>Date:</strong> ${new Date(tx.paid_at).toLocaleString()}<br>
-            <strong>Estimated Delivery:</strong> Within 24 hours
+        if (data.success) {
+          const o = data.order;
+          resultBox.style.display = 'block';
+          displayStatus.textContent = 'Status: ' + o.status;
+          displayDetails.innerHTML = `
+            <strong>Order Code:</strong> ${o.reference}<br>
+            <strong>Customer:</strong> ${o.customerName}<br>
+            <strong>Items:</strong> ${o.items}<br>
+            <strong>Delivery Address:</strong> ${o.address}<br>
+            <strong>Amount:</strong> GH₵${Number(o.amount).toFixed(2)}
           `;
-          waBtn.href = `https://wa.me/233536473017?text=${encodeURIComponent('Hi, I am tracking my order: ' + tx.reference)}`;
+
+          // Reset steps
+          ['step1', 'step2', 'step3', 'step4'].forEach(id => {
+            document.getElementById(id).className = 'circle';
+          });
+
+          // Update timeline based on Live Admin Status
+          document.getElementById('step1').className = 'circle done';
+          if (o.status === 'Packaging') {
+            document.getElementById('step2').className = 'circle active';
+          } else if (o.status === 'Out for Delivery') {
+            document.getElementById('step2').className = 'circle done';
+            document.getElementById('step3').className = 'circle active';
+          } else if (o.status === 'Delivered') {
+            document.getElementById('step2').className = 'circle done';
+            document.getElementById('step3').className = 'circle done';
+            document.getElementById('step4').className = 'circle done';
+          }
+
+          document.getElementById('waContact').href = `https://wa.me/233536473017?text=${encodeURIComponent('Hi, checking order: ' + o.reference)}`;
         } else {
-          details.innerHTML = '<span style="color:#dc3545;">Order reference not found or unpaid. Please check the code.</span>';
+          alert('Order not found. Please check your reference code.');
         }
       } catch (err) {
-        details.innerHTML = 'Unable to check status. Try again later.';
+        alert('Error fetching order.');
       }
     });
   </script>
