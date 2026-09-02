@@ -14,6 +14,9 @@ document.getElementById('checkoutForm').addEventListener('submit', async (e) => 
   btn.disabled = true;
   btn.textContent = 'Connecting to Paystack...';
 
+  // Format the list of items into a clean text summary
+  const itemsList = cart.map(item => `${item.name} (Qty: ${item.qty}) - GH₵${(item.price * item.qty).toFixed(2)}`).join(' | ');
+
   try {
     const res = await fetch('/api/payment/initialize', {
       method: 'POST',
@@ -24,7 +27,9 @@ document.getElementById('checkoutForm').addEventListener('submit', async (e) => 
         metadata: {
           customerName: document.getElementById('name').value,
           phone: document.getElementById('phone').value,
-          address: document.getElementById('address').value
+          address: document.getElementById('address').value,
+          itemsSummary: itemsList,
+          cartItems: cart
         }
       })
     });
@@ -32,7 +37,7 @@ document.getElementById('checkoutForm').addEventListener('submit', async (e) => 
     if (data.status && data.data.authorization_url) {
       window.location.href = data.data.authorization_url;
     } else {
-      alert(data.message || 'Payment failed to initialize.');
+      alert(data.message || 'Payment initialization failed');
       btn.disabled = false;
       btn.textContent = 'Pay with Paystack (MoMo / Card) 💳';
     }
