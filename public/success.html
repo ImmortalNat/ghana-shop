@@ -1,36 +1,167 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Order Confirmed - ShopWave</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Confirmed & Tracking - Shop with ease</title>
   <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    /* Delivery Progress Tracker Styling */
+    .tracking-timeline {
+      margin: 2rem 0;
+      text-align: left;
+    }
+    .timeline-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+    .timeline-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 17px;
+      top: 36px;
+      height: calc(100% - 10px);
+      width: 2px;
+      background: #dee2e6;
+    }
+    .timeline-step.completed:not(:last-child)::after {
+      background: #28a745;
+    }
+    .step-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #dee2e6;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      z-index: 1;
+    }
+    .step-icon.active {
+      background: #ff6b35;
+      animation: pulse 1.5s infinite;
+    }
+    .step-icon.done {
+      background: #28a745;
+    }
+    .step-content h4 {
+      margin: 0;
+      font-size: 1rem;
+      color: #1a1a2e;
+    }
+    .step-content p {
+      margin: 0.2rem 0 0;
+      font-size: 0.85rem;
+      color: #6c757d;
+    }
+    .whatsapp-track-btn {
+      background: #25D366;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.9rem 1.5rem;
+      border-radius: 8px;
+      font-weight: bold;
+      text-decoration: none;
+      margin-top: 1.5rem;
+      transition: 0.2s;
+    }
+    .whatsapp-track-btn:hover {
+      background: #1eb954;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.4); }
+      70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 107, 53, 0); }
+      100% { transform: scale(1); }
+    }
+  </style>
 </head>
 <body>
-  <div class="page-container" style="text-align: center; margin-top: 4rem;">
-    <div style="background: #fff; padding: 2.5rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); max-width: 500px; margin: 0 auto;">
-      <h1 style="font-size: 3.5rem;">🎉</h1>
-      <h2 style="color: var(--success); margin: 0.8rem 0;">Payment Successful!</h2>
-      <p id="statusMsg" style="color: var(--gray-600);">Verifying with Paystack...</p>
-      <div id="txInfo" style="margin: 1.5rem 0; text-align: left; background: #f8f9fa; padding: 1rem; border-radius: 6px; display: none; font-size:0.95rem;"></div>
-      <a href="/" class="btn" style="display:inline-block; width:auto; padding: 0.75rem 2rem;">Continue Shopping</a>
+  <div class="page-container" style="text-align: center; margin-top: 2.5rem; max-width: 550px;">
+    <div style="background: #fff; padding: 2.5rem 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.06);">
+      <h1 style="font-size: 3rem; margin: 0;">🎉</h1>
+      <h2 style="color: #28a745; margin: 0.5rem 0;">Payment Successful!</h2>
+      <p id="statusMsg" style="color: #6c757d; font-size: 0.95rem;">Your order is confirmed and is being processed.</p>
+
+      <!-- Order Details Box -->
+      <div id="txInfo" style="margin: 1.5rem 0; text-align: left; background: #f8f9fa; padding: 1.2rem; border-radius: 8px; font-size: 0.9rem; border: 1px solid #e9ecef;"></div>
+
+      <!-- Delivery Progress Tracker -->
+      <h3 style="text-align: left; margin-top: 2rem; font-size: 1.1rem;">📦 Delivery Progress</h3>
+      <div class="tracking-timeline">
+        <div class="timeline-step completed">
+          <div class="step-icon done">✓</div>
+          <div class="step-content">
+            <h4>Order Confirmed & Paid</h4>
+            <p>Payment received via Paystack</p>
+          </div>
+        </div>
+
+        <div class="timeline-step">
+          <div class="step-icon active">⏳</div>
+          <div class="step-content">
+            <h4>Packaging & Processing</h4>
+            <p>Our team is packaging your items for dispatch</p>
+          </div>
+        </div>
+
+        <div class="timeline-step">
+          <div class="step-icon">🚚</div>
+          <div class="step-content">
+            <h4>Out for Delivery (Rider Dispatched)</h4>
+            <p>Estimated arrival: Within 24 hours</p>
+          </div>
+        </div>
+
+        <div class="timeline-step">
+          <div class="step-icon">📍</div>
+          <div class="step-content">
+            <h4>Delivered</h4>
+            <p>Delivered to your address</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Direct WhatsApp Tracking Button -->
+      <a id="whatsappBtn" href="#" target="_blank" class="whatsapp-track-btn">
+        💬 Track Delivery on WhatsApp
+      </a>
+
+      <a href="/" class="btn" style="display: block; margin-top: 1rem; background: #0a7e8c; text-decoration: none; padding: 0.75rem;">
+        Back to Home Store
+      </a>
     </div>
   </div>
+
   <script>
     const ref = new URLSearchParams(window.location.search).get('reference');
+    const myWhatsAppNumber = "233536473017"; // Your WhatsApp number
+
     if (ref) {
       fetch('/api/payment/verify/' + ref)
         .then(r => r.json())
         .then(data => {
           if (data.status && data.data.status === 'success') {
             localStorage.removeItem('shopwave_cart');
-            document.getElementById('statusMsg').textContent = 'Medase! Your order has been placed successfully.';
-            document.getElementById('txInfo').style.display = 'block';
+            const tx = data.data;
+
             document.getElementById('txInfo').innerHTML = `
-              <strong>Reference:</strong> ${data.data.reference}<br>
-              <strong>Amount Paid:</strong> GH₵${(data.data.amount / 100).toFixed(2)}<br>
-              <strong>Customer:</strong> ${data.data.customer.email}<br>
-              <strong>Channel:</strong> ${data.data.channel.toUpperCase()}
+              <strong>Order Code:</strong> ${tx.reference}<br>
+              <strong>Amount Paid:</strong> GH₵${(tx.amount / 100).toFixed(2)}<br>
+              <strong>Customer Email:</strong> ${tx.customer.email}<br>
+              <strong>Payment Method:</strong> ${tx.channel.toUpperCase()}
             `;
+
+            // Prepare pre-filled WhatsApp message
+            const waMessage = encodeURIComponent(`Hello Shop with ease, I just made a payment of GH₵${(tx.amount/100).toFixed(2)} for Order Code: ${tx.reference}. Please provide a delivery update.`);
+            document.getElementById('whatsappBtn').href = `https://wa.me/${myWhatsAppNumber}?text=${waMessage}`;
           }
         });
     }
