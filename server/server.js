@@ -13,171 +13,155 @@ const ORDERS_FILE = path.join(__dirname, 'orders.json');
 const PRODUCTS_FILE = path.join(__dirname, 'products.json');
 const SETTINGS_FILE = path.join(__dirname, 'settings.json');
 
-// Default initial products
 const DEFAULT_PRODUCTS = [
-  { id: 1, name: "Wireless Headphones", price: 250, image: "https://picsum.photos/id/1/400/300", description: "Premium noise cancellation headphones", category: "Electronics" },
-  { id: 2, name: "Smart Watch", price: 380, image: "https://picsum.photos/id/2/400/300", description: "Health monitoring smartwatch", category: "Electronics" },
-  { id: 3, name: "Running Sneakers", price: 290, image: "https://picsum.photos/id/3/400/300", description: "Lightweight running shoes", category: "Fashion" },
-  { id: 4, name: "Leather Backpack", price: 180, image: "https://picsum.photos/id/4/400/300", description: "Genuine leather laptop backpack", category: "Fashion" },
-  { id: 5, name: "Bluetooth Speaker", price: 130, image: "https://picsum.photos/id/5/400/300", description: "Waterproof portable speaker", category: "Electronics" },
-  { id: 6, name: "Automatic Coffee Maker", price: 320, image: "https://picsum.photos/id/6/400/300", description: "Drip coffee machine", category: "Home" }
+  { id: 1, name: "Wireless Headphones", price: 250, image: "https://picsum.photos/id/1/400/300", description: "Premium noise cancellation headphones.", category: "Electronics" },
+  { id: 2, name: "Smart Watch", price: 380, image: "https://picsum.photos/id/2/400/300", description: "Health monitoring smartwatch.", category: "Electronics" },
+  { id: 3, name: "Running Sneakers", price: 290, image: "https://picsum.photos/id/3/400/300", description: "Lightweight running shoes.", category: "Fashion" },
+  { id: 4, name: "Leather Backpack", price: 180, image: "https://picsum.photos/id/4/400/300", description: "Genuine leather laptop backpack.", category: "Fashion" },
+  { id: 5, name: "Bluetooth Speaker", price: 130, image: "https://picsum.photos/id/5/400/300", description: "Waterproof portable speaker.", category: "Electronics" },
+  { id: 6, name: "Automatic Coffee Maker", price: 320, image: "https://picsum.photos/id/6/400/300", description: "Drip coffee machine.", category: "Home" }
 ];
 
 const DEFAULT_SETTINGS = {
   storeName: "Shop with ease",
-  heroTitle: "Welcome to Shop with ease",
-  heroSubtitle: "Pay easily with Mobile Money (MTN, Telecel, AT) or Bank Cards via Paystack.",
-  whatsappNumber: "233536473017"
+  announcement: "⚡ Welcome! Fast delivery across Ghana 🇬🇭",
+  heroTitle: "Shop Quality Products with Ease",
+  heroSubtitle: "Instant payments with MTN MoMo, Telecel Cash, AT Money, and Bank Cards.",
+  whatsappNumber: "233536473017",
+  supportPhone: "0536473017",
+  supportEmail: "support@shopwithease.com",
+  shopAddress: "Accra, Ghana",
+  aboutTitle: "About Shop with ease",
+  aboutText: "Ghana's trusted online shopping destination for quality products with fast delivery.",
+  aboutImage: "https://images.unsplash.com/photo-1556742049-0a67e55722c3?w=600",
+  instagramUrl: "",
+  tiktokUrl: ""
 };
 
 function getJsonFile(file, defaultData) {
   try {
-    if (fs.existsSync(file)) {
-      return JSON.parse(fs.readFileSync(file, 'utf8') || '[]');
-    }
+    if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf8') || '[]');
   } catch (e) {}
   return defaultData;
 }
 
 function saveJsonFile(file, data) {
-  try {
-    fs.writeFileSync(file, JSON.stringify(data, null, 2));
-  } catch (e) {
-    console.error('File save error:', e.message);
-  }
+  try { fs.writeFileSync(file, JSON.stringify(data, null, 2)); } catch (e) {}
 }
 
 if (!fs.existsSync(PRODUCTS_FILE)) saveJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
 if (!fs.existsSync(SETTINGS_FILE)) saveJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS);
 
 app.use(cors());
-// Increased limits for image uploads from phones/files
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
-
 app.use('/api/payment', paymentRoutes);
 
-// Store APIs
 app.get('/api/products', (req, res) => res.json(getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS)));
 app.get('/api/settings', (req, res) => res.json(getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS)));
 
-// Order tracking API
 app.get('/api/orders/:ref', async (req, res) => {
   const ref = (req.params.ref || '').trim();
   const orders = getJsonFile(ORDERS_FILE, []);
   let order = orders.find(o => o.reference && o.reference.toLowerCase() === ref.toLowerCase());
-
   if (order) return res.json({ success: true, order });
-
   try {
-    const paystackSecret = (process.env.PAYSTACK_SECRET_KEY || '').trim();
-    const paystackRes = await axios.get(
-      `https://api.paystack.co/transaction/verify/${ref}`,
-      { headers: { Authorization: `Bearer ${paystackSecret}` } }
-    );
-
-    if (paystackRes.data.status && paystackRes.data.data.status === 'success') {
-      const tx = paystackRes.data.data;
-      const newOrder = {
-        reference: tx.reference,
-        amount: tx.amount / 100,
-        customerEmail: tx.customer.email,
-        customerName: tx.metadata?.customerName || tx.customer.email,
-        phone: tx.metadata?.phone || (tx.authorization?.mobile_money_number || 'N/A'),
-        address: tx.metadata?.address || 'Accra, Ghana',
-        items: tx.metadata?.itemsSummary || 'Store Order',
-        status: 'Packaging',
-        paidAt: tx.paid_at || new Date().toISOString()
-      };
-
-      orders.push(newOrder);
-      saveJsonFile(ORDERS_FILE, orders);
-      return res.json({ success: true, order: newOrder });
+    const ps = (process.env.PAYSTACK_SECRET_KEY || '').trim();
+    const pr = await axios.get(`https://api.paystack.co/transaction/verify/${ref}`, { headers: { Authorization: `Bearer ${ps}` } });
+    if (pr.data.status && pr.data.data.status === 'success') {
+      const tx = pr.data.data;
+      const no = { reference: tx.reference, amount: tx.amount / 100, customerEmail: tx.customer.email, customerName: tx.metadata?.customerName || tx.customer.email, phone: tx.metadata?.phone || 'N/A', address: tx.metadata?.address || 'Accra', items: tx.metadata?.itemsSummary || 'Order', status: 'Packaging', paidAt: tx.paid_at };
+      orders.push(no); saveJsonFile(ORDERS_FILE, orders);
+      return res.json({ success: true, order: no });
     }
   } catch (err) {}
-
   res.status(404).json({ success: false, message: 'Order not found' });
 });
 
-// Admin Auth Middleware
 function verifyAdmin(req, res, next) {
   const { password } = req.body;
-  const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
-  if (password !== adminPass) {
-    return res.status(401).json({ success: false, message: 'Incorrect Admin Password' });
-  }
+  if (password !== (process.env.ADMIN_PASSWORD || 'admin123')) return res.status(401).json({ success: false, message: 'Incorrect Password' });
   next();
 }
 
-app.post('/api/admin/orders', verifyAdmin, (req, res) => {
-  res.json({ success: true, orders: getJsonFile(ORDERS_FILE, []).reverse() });
-});
-
+app.post('/api/admin/orders', verifyAdmin, (req, res) => res.json({ success: true, orders: getJsonFile(ORDERS_FILE, []).reverse() }));
 app.post('/api/admin/update-status', verifyAdmin, (req, res) => {
-  const { reference, status } = req.body;
   const orders = getJsonFile(ORDERS_FILE, []);
-  const order = orders.find(o => o.reference && o.reference.toLowerCase() === (reference || '').toLowerCase());
-  if (order) {
-    order.status = status;
-    order.updatedAt = new Date().toISOString();
-    saveJsonFile(ORDERS_FILE, orders);
-    return res.json({ success: true, message: 'Status updated' });
-  }
-  res.status(404).json({ success: false, message: 'Order not found' });
+  const o = orders.find(x => x.reference && x.reference.toLowerCase() === (req.body.reference || '').toLowerCase());
+  if (o) { o.status = req.body.status; o.updatedAt = new Date().toISOString(); saveJsonFile(ORDERS_FILE, orders); return res.json({ success: true }); }
+  res.status(404).json({ success: false });
 });
-
-// Save Product (Handles direct file photo uploads)
 app.post('/api/admin/products/save', verifyAdmin, (req, res) => {
-  const { product } = req.body;
   let products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
+  const p = req.body.product;
+  if (p.id) { const i = products.findIndex(x => x.id === Number(p.id)); if (i !== -1) products[i] = { ...products[i], ...p, id: Number(p.id), price: Number(p.price) }; }
+  else products.push({ ...p, id: Date.now(), price: Number(p.price) });
+  saveJsonFile(PRODUCTS_FILE, products); res.json({ success: true });
+});
+app.post('/api/admin/products/delete', verifyAdmin, (req, res) => {
+  let products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS).filter(p => p.id !== Number(req.body.productId));
+  saveJsonFile(PRODUCTS_FILE, products); res.json({ success: true });
+});
+app.post('/api/admin/settings/save', verifyAdmin, (req, res) => {
+  const current = getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS);
+  const updated = { ...current, ...req.body.settings };
+  saveJsonFile(SETTINGS_FILE, updated); res.json({ success: true, settings: updated });
+});
 
-  if (product.id) {
-    const index = products.findIndex(p => p.id === Number(product.id));
-    if (index !== -1) {
-      products[index] = { ...products[index], ...product, id: Number(product.id), price: Number(product.price) };
-    }
-  } else {
-    const newProduct = {
-      ...product,
-      id: Date.now(),
-      price: Number(product.price)
-    };
-    products.push(newProduct);
+// ==================== 🤖 SMART AI STORE MANAGER ====================
+app.post('/api/admin/ai/chat', verifyAdmin, async (req, res) => {
+  const { message } = req.body;
+  const msg = (message || '').trim();
+  const lower = msg.toLowerCase();
+  const settings = getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS);
+  const products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
+
+  // If OpenAI key exists, use it for advanced queries
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const aiRes = await axios.post('https://api.openai.com/v1/chat/completions', {
+        model: 'gpt-3.5-turbo',
+        messages: [
+          { role: 'system', content: `You are an AI store manager for a Ghanaian e-commerce shop called "${settings.storeName}". Current products: ${products.map(p => p.name + ' GH₵' + p.price).join(', ')}. Current settings: storeName=${settings.storeName}, heroTitle=${settings.heroTitle}, aboutText=${settings.aboutText}. Help the owner modify anything. Be concise and friendly.` },
+          { role: 'user', content: msg }
+        ],
+        max_tokens: 400
+      }, { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` } });
+      return res.json({ success: true, reply: aiRes.data.choices[0].message.content.trim(), action: 'info' });
+    } catch (err) { console.error('OpenAI error:', err.message); }
   }
 
-  saveJsonFile(PRODUCTS_FILE, products);
-  res.json({ success: true, products });
-});
+  // ===== BUILT-IN SMART AI (No API Key Needed) =====
+  let reply = '';
+  let action = 'info';
 
-app.post('/api/admin/products/delete', verifyAdmin, (req, res) => {
-  const { productId } = req.body;
-  let products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
-  products = products.filter(p => p.id !== Number(productId));
-  saveJsonFile(PRODUCTS_FILE, products);
-  res.json({ success: true, products });
-});
+  // 1. CHANGE STORE NAME
+  if (lower.includes('change') && (lower.includes('store name') || lower.includes('shop name') || lower.includes('brand name'))) {
+    const newName = msg.replace(/change\s+(my\s+)?(store|shop|brand)\s+name\s+to\s+/i, '').replace(/["']/g, '').trim();
+    if (newName.length > 1) {
+      settings.storeName = newName;
+      saveJsonFile(SETTINGS_FILE, settings);
+      reply = `✅ Done! Your store name is now "${newName}". Refresh your live store to see the change!`;
+      action = 'executed';
+    } else {
+      reply = '🤔 Please tell me the new name. Example: "Change store name to K-Store"';
+    }
+  }
 
-app.post('/api/admin/settings/save', verifyAdmin, (req, res) => {
-  const { settings } = req.body;
-  const current = getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS);
-  const updated = { ...current, ...settings };
-  saveJsonFile(SETTINGS_FILE, updated);
-  res.json({ success: true, settings: updated });
-});
+  // 2. CHANGE HERO TITLE
+  else if (lower.includes('hero') && (lower.includes('title') || lower.includes('heading') || lower.includes('banner'))) {
+    const newTitle = msg.replace(/change\s+(the\s+)?(hero|banner)\s+(title|heading|text)\s+to\s+/i, '').replace(/["']/g, '').trim();
+    if (newTitle.length > 1) {
+      settings.heroTitle = newTitle;
+      saveJsonFile(SETTINGS_FILE, settings);
+      reply = `✅ Done! Hero title updated to "${newTitle}". Refresh your store to see it!`;
+      action = 'executed';
+    } else {
+      reply = '🤔 Tell me the new hero title. Example: "Change hero title to Best Deals in Accra"';
+    }
+  }
 
-// Page routes
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
-app.get(['/cart', '/cart.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'cart.html')));
-app.get(['/checkout', '/checkout.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'checkout.html')));
-app.get(['/success', '/success.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'success.html')));
-app.get(['/track', '/track.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'track.html')));
-app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'admin.html')));
-
-app.listen(PORT, () => {
-  console.log("====================================================");
-  console.log("  🚀 ShopWave (GH₵) is live on Port: " + PORT);
-  console.log("====================================================");
-});
-
-module.exports = app;
+  // 3. CHANGE HERO SUBTITLE
+  else if (lower.includes('hero') && (lower.includes('subtitle') || lower.includes('subtext') || lower.includes('description'))) {
+    const 
