@@ -30,7 +30,6 @@ const DEFAULT_SETTINGS = {
   whatsappNumber: "233536473017"
 };
 
-// Helpers for JSON files
 function getJsonFile(file, defaultData) {
   try {
     if (fs.existsSync(file)) {
@@ -48,27 +47,22 @@ function saveJsonFile(file, data) {
   }
 }
 
-// Initialize files if missing
 if (!fs.existsSync(PRODUCTS_FILE)) saveJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
 if (!fs.existsSync(SETTINGS_FILE)) saveJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS);
 
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Increased limits for image uploads from phones/files
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.use('/api/payment', paymentRoutes);
 
-// ==================== PUBLIC STORE APIS ====================
-app.get('/api/products', (req, res) => {
-  res.json(getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS));
-});
+// Store APIs
+app.get('/api/products', (req, res) => res.json(getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS)));
+app.get('/api/settings', (req, res) => res.json(getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS)));
 
-app.get('/api/settings', (req, res) => {
-  res.json(getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS));
-});
-
-// ==================== ORDER TRACKING API ====================
+// Order tracking API
 app.get('/api/orders/:ref', async (req, res) => {
   const ref = (req.params.ref || '').trim();
   const orders = getJsonFile(ORDERS_FILE, []);
@@ -106,7 +100,7 @@ app.get('/api/orders/:ref', async (req, res) => {
   res.status(404).json({ success: false, message: 'Order not found' });
 });
 
-// ==================== ADMIN AUTH & APIS ====================
+// Admin Auth Middleware
 function verifyAdmin(req, res, next) {
   const { password } = req.body;
   const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
@@ -116,12 +110,10 @@ function verifyAdmin(req, res, next) {
   next();
 }
 
-// 1. Get Orders
 app.post('/api/admin/orders', verifyAdmin, (req, res) => {
   res.json({ success: true, orders: getJsonFile(ORDERS_FILE, []).reverse() });
 });
 
-// 2. Update Order Status
 app.post('/api/admin/update-status', verifyAdmin, (req, res) => {
   const { reference, status } = req.body;
   const orders = getJsonFile(ORDERS_FILE, []);
@@ -135,19 +127,17 @@ app.post('/api/admin/update-status', verifyAdmin, (req, res) => {
   res.status(404).json({ success: false, message: 'Order not found' });
 });
 
-// 3. Save / Add Product
+// Save Product (Handles direct file photo uploads)
 app.post('/api/admin/products/save', verifyAdmin, (req, res) => {
   const { product } = req.body;
   let products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
 
   if (product.id) {
-    // Edit existing product
     const index = products.findIndex(p => p.id === Number(product.id));
     if (index !== -1) {
       products[index] = { ...products[index], ...product, id: Number(product.id), price: Number(product.price) };
     }
   } else {
-    // Add new product
     const newProduct = {
       ...product,
       id: Date.now(),
@@ -160,7 +150,6 @@ app.post('/api/admin/products/save', verifyAdmin, (req, res) => {
   res.json({ success: true, products });
 });
 
-// 4. Delete Product
 app.post('/api/admin/products/delete', verifyAdmin, (req, res) => {
   const { productId } = req.body;
   let products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
@@ -169,7 +158,6 @@ app.post('/api/admin/products/delete', verifyAdmin, (req, res) => {
   res.json({ success: true, products });
 });
 
-// 5. Update Store Settings (Name, Banner, WhatsApp Number)
 app.post('/api/admin/settings/save', verifyAdmin, (req, res) => {
   const { settings } = req.body;
   const current = getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS);
@@ -178,7 +166,7 @@ app.post('/api/admin/settings/save', verifyAdmin, (req, res) => {
   res.json({ success: true, settings: updated });
 });
 
-// ==================== PAGE ROUTES ====================
+// Page routes
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
 app.get(['/cart', '/cart.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'cart.html')));
 app.get(['/checkout', '/checkout.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'checkout.html')));
