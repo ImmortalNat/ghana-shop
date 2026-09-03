@@ -58,21 +58,80 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/api/payment', paymentRoutes);
 
+// ==================== GHANA SMS GATEWAY INTEGRATION ====================
+
+// Format local phone numbers to international GHS format (e.g. 0536473017 -> 233536473017)
+function formatGhanaPhone(phone) {
+  let clean = (phone || '').replace(/[^0-9]/g, '');
+  if (clean.startsWith('0')) {
+    clean = '233' + clean.substring(1);
+  } else if (clean.length === 9) {
+    clean = '233' + clean;
+  }
+  return clean;
+}
+
+// Send automated SMS using Arkesel SMS API
+async function sendProgressSMS(to, storeName, ref, status, note) {
+  const apiKey = process.env.SMS_API_KEY;
+  const senderId = (process.env.SMS_SENDER_ID || 'ShopWave').substring(0, 11);
+  const formattedPhone = formatGhanaPhone(to);
+  const trackLink = `${process.env.BASE_URL || 'https://shop-wave-shop.onrender.com'}/track?ref=${ref}`;
+
+  let statusHeader = '';
+  if (status === 'Out for Delivery') statusHeader = '🚚 OUT FOR DELIVERY!';
+  else if (status === 'Delivered') statusHeader = '🟢 DELIVERED!';
+  else statusHeader = '📦 ORDER UPDATED!';
+
+  const message = `Hello! ${statusHeader}\n\nStore: ${storeName}\nOrder: ${ref}\nUpdate: ${note}\n\n🔍 Live Tracking:\n${trackLink}\n\nThank you!`;
+
+  if (!apiKey || apiKey.includes('YOUR_')) {
+    console.log(`\n📝 [SMS Demo Log (Set SMS_API_KEY to send for real)]`);
+    console.log(`To: ${formattedPhone}\nMessage:\n${message}\n`);
+    return { success: false, reason: 'Console logged (API Key missing)' };
+  }
+
+  try {
+    const url = `https://api.arkesel.com/sms/api?action=send-sms&api_key=${apiKey}&to=${formattedPhone}&from=${senderId}&sms=${encodeURIComponent(message)}`;
+    const response = await axios.get(url);
+    console.log(`✅ SMS successfully dispatched to ${formattedPhone}:`, response.data);
+    return { success: true, data: response.data };
+  } catch (err) {
+    console.error('❌ SMS Gateway Error:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+// Store APIs
 app.get('/api/products', (req, res) => res.json(getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS)));
 app.get('/api/settings', (req, res) => res.json(getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS)));
 
+// Live Tracking Page Endpoint
 app.get('/api/orders/:ref', async (req, res) => {
   const ref = (req.params.ref || '').trim();
   const orders = getJsonFile(ORDERS_FILE, []);
   let order = orders.find(o => o.reference && o.reference.toLowerCase() === ref.toLowerCase());
   if (order) return res.json({ success: true, order });
+
   try {
     const ps = (process.env.PAYSTACK_SECRET_KEY || '').trim();
     const pr = await axios.get(`https://api.paystack.co/transaction/verify/${ref}`, { headers: { Authorization: `Bearer ${ps}` } });
     if (pr.data.status && pr.data.data.status === 'success') {
       const tx = pr.data.data;
-      const no = { reference: tx.reference, amount: tx.amount / 100, customerEmail: tx.customer.email, customerName: tx.metadata?.customerName || tx.customer.email, phone: tx.metadata?.phone || 'N/A', address: tx.metadata?.address || 'Accra', items: tx.metadata?.itemsSummary || 'Order', status: 'Packaging', paidAt: tx.paid_at };
-      orders.push(no); saveJsonFile(ORDERS_FILE, orders);
+      const no = {
+        reference: tx.reference,
+        amount: tx.amount / 100,
+        customerEmail: tx.customer.email,
+        customerName: tx.metadata?.customerName || tx.customer.email,
+        phone: tx.metadata?.phone || (tx.authorization?.mobile_money_number || 'N/A'),
+        address: tx.metadata?.address || 'Accra',
+        items: tx.metadata?.itemsSummary || 'Store Order',
+        status: 'Packaging',
+        deliveryNote: 'Your order is being packaged and prepared for delivery.',
+        paidAt: tx.paid_at || new Date().toISOString()
+      };
+      orders.push(no);
+      saveJsonFile(ORDERS_FILE, orders);
       return res.json({ success: true, order: no });
     }
   } catch (err) {}
@@ -81,35 +140,70 @@ app.get('/api/orders/:ref', async (req, res) => {
 
 function verifyAdmin(req, res, next) {
   const { password } = req.body;
-  if (password !== (process.env.ADMIN_PASSWORD || 'admin123')) return res.status(401).json({ success: false, message: 'Incorrect Password' });
+  if (password !== (process.env.ADMIN_PASSWORD || 'admin123')) {
+    return res.status(401).json({ success: false, message: 'Incorrect Admin Password' });
+  }
   next();
 }
 
-app.post('/api/admin/orders', verifyAdmin, (req, res) => res.json({ success: true, orders: getJsonFile(ORDERS_FILE, []).reverse() }));
-app.post('/api/admin/update-status', verifyAdmin, (req, res) => {
-  const orders = getJsonFile(ORDERS_FILE, []);
-  const o = orders.find(x => x.reference && x.reference.toLowerCase() === (req.body.reference || '').toLowerCase());
-  if (o) { o.status = req.body.status; o.updatedAt = new Date().toISOString(); saveJsonFile(ORDERS_FILE, orders); return res.json({ success: true }); }
-  res.status(404).json({ success: false });
+app.post('/api/admin/orders', verifyAdmin, (req, res) => {
+  res.json({ success: true, orders: getJsonFile(ORDERS_FILE, []).reverse() });
 });
+
+// ==================== UPDATE STATUS AND AUTO-SEND SMS ====================
+app.post('/api/admin/update-progress', verifyAdmin, async (req, res) => {
+  const { reference, status, deliveryNote } = req.body;
+  const orders = getJsonFile(ORDERS_FILE, []);
+  const settings = getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS);
+  const order = orders.find(o => o.reference && o.reference.toLowerCase() === (reference || '').toLowerCase());
+  
+  if (order) {
+    order.status = status || order.status;
+    order.deliveryNote = deliveryNote || order.deliveryNote || '';
+    order.updatedAt = new Date().toISOString();
+    saveJsonFile(ORDERS_FILE, orders);
+
+    // Trigger Automatic SMS Alert
+    await sendProgressSMS(
+      order.phone,
+      settings.storeName,
+      order.reference,
+      order.status,
+      order.deliveryNote
+    );
+
+    return res.json({ success: true, message: 'Order progress updated and SMS dispatched!' });
+  }
+  res.status(404).json({ success: false, message: 'Order not found' });
+});
+
 app.post('/api/admin/products/save', verifyAdmin, (req, res) => {
   let products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
   const p = req.body.product;
-  if (p.id) { const i = products.findIndex(x => x.id === Number(p.id)); if (i !== -1) products[i] = { ...products[i], ...p, id: Number(p.id), price: Number(p.price) }; }
-  else products.push({ ...p, id: Date.now(), price: Number(p.price) });
-  saveJsonFile(PRODUCTS_FILE, products); res.json({ success: true });
+  if (p.id) {
+    const i = products.findIndex(x => x.id === Number(p.id));
+    if (i !== -1) products[i] = { ...products[i], ...p, id: Number(p.id), price: Number(p.price) };
+  } else {
+    products.push({ ...p, id: Date.now(), price: Number(p.price) });
+  }
+  saveJsonFile(PRODUCTS_FILE, products);
+  res.json({ success: true });
 });
+
 app.post('/api/admin/products/delete', verifyAdmin, (req, res) => {
   let products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS).filter(p => p.id !== Number(req.body.productId));
-  saveJsonFile(PRODUCTS_FILE, products); res.json({ success: true });
+  saveJsonFile(PRODUCTS_FILE, products);
+  res.json({ success: true });
 });
+
 app.post('/api/admin/settings/save', verifyAdmin, (req, res) => {
   const current = getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS);
   const updated = { ...current, ...req.body.settings };
-  saveJsonFile(SETTINGS_FILE, updated); res.json({ success: true, settings: updated });
+  saveJsonFile(SETTINGS_FILE, updated);
+  res.json({ success: true, settings: updated });
 });
 
-// ==================== 🤖 SMART AI STORE MANAGER ====================
+// AI Store Manager API
 app.post('/api/admin/ai/chat', verifyAdmin, async (req, res) => {
   const { message } = req.body;
   const msg = (message || '').trim();
@@ -117,199 +211,47 @@ app.post('/api/admin/ai/chat', verifyAdmin, async (req, res) => {
   const settings = getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS);
   const products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
 
-  // If OpenAI key exists, use it for advanced queries
   if (process.env.OPENAI_API_KEY) {
     try {
       const aiRes = await axios.post('https://api.openai.com/v1/chat/completions', {
         model: 'gpt-3.5-turbo',
         messages: [
-          { role: 'system', content: `You are an AI store manager for a Ghanaian e-commerce shop called "${settings.storeName}". Current products: ${products.map(p => p.name + ' GH₵' + p.price).join(', ')}. Current settings: storeName=${settings.storeName}, heroTitle=${settings.heroTitle}, aboutText=${settings.aboutText}. Help the owner modify anything. Be concise and friendly.` },
+          { role: 'system', content: `You are an AI store manager for "${settings.storeName}". Current products: ${products.map(p => p.name + ' GH₵' + p.price).join(', ')}.` },
           { role: 'user', content: msg }
         ],
         max_tokens: 400
       }, { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` } });
       return res.json({ success: true, reply: aiRes.data.choices[0].message.content.trim(), action: 'info' });
-    } catch (err) { console.error('OpenAI error:', err.message); }
+    } catch (err) {}
   }
 
-  // ===== BUILT-IN SMART AI (No API Key Needed) =====
   let reply = '';
   let action = 'info';
 
-  // 1. CHANGE STORE NAME
-  if (lower.includes('change') && (lower.includes('store name') || lower.includes('shop name') || lower.includes('brand name'))) {
-    const newName = msg.replace(/change\s+(my\s+)?(store|shop|brand)\s+name\s+to\s+/i, '').replace(/["']/g, '').trim();
-    if (newName.length > 1) {
-      settings.storeName = newName;
-      saveJsonFile(SETTINGS_FILE, settings);
-      reply = `✅ Done! Your store name is now "${newName}". Refresh your live store to see the change!`;
-      action = 'executed';
-    } else {
-      reply = '🤔 Please tell me the new name. Example: "Change store name to K-Store"';
-    }
-  }
-
-  // 2. CHANGE HERO TITLE
-  else if (lower.includes('hero') && (lower.includes('title') || lower.includes('heading') || lower.includes('banner'))) {
-    const newTitle = msg.replace(/change\s+(the\s+)?(hero|banner)\s+(title|heading|text)\s+to\s+/i, '').replace(/["']/g, '').trim();
-    if (newTitle.length > 1) {
-      settings.heroTitle = newTitle;
-      saveJsonFile(SETTINGS_FILE, settings);
-      reply = `✅ Done! Hero title updated to "${newTitle}". Refresh your store to see it!`;
-      action = 'executed';
-    } else {
-      reply = '🤔 Tell me the new hero title. Example: "Change hero title to Best Deals in Accra"';
-    }
-  }
-
-  // 3. CHANGE HERO SUBTITLE
-  else if (lower.includes('hero') && (lower.includes('subtitle') || lower.includes('subtext') || lower.includes('description'))) {
-    const newSub = msg.replace(/change\s+(the\s+)?(hero\s+)?(subtitle|subtext|description)\s+to\s+/i, '').replace(/["']/g, '').trim();
-    if (newSub.length > 1) {
-      settings.heroSubtitle = newSub;
-      saveJsonFile(SETTINGS_FILE, settings);
-      reply = `✅ Done! Hero subtitle updated. Refresh your store!`;
-      action = 'executed';
-    } else {
-      reply = '🤔 Tell me the new subtitle text.';
-    }
-  }
-
-  // 4. CHANGE ANNOUNCEMENT
-  else if (lower.includes('announcement') || lower.includes('top bar') || lower.includes('promo bar')) {
-    const newAnn = msg.replace(/change\s+(the\s+)?(announcement|top\s+bar|promo\s+bar)\s+to\s+/i, '').replace(/["']/g, '').trim();
-    if (newAnn.length > 1) {
-      settings.announcement = newAnn;
-      saveJsonFile(SETTINGS_FILE, settings);
-      reply = `✅ Done! Announcement bar updated to "${newAnn}".`;
-      action = 'executed';
-    } else {
-      reply = '🤔 Tell me the new announcement text.';
-    }
-  }
-
-  // 5. CHANGE ABOUT US
-  else if (lower.includes('about') && (lower.includes('update') || lower.includes('change') || lower.includes('write') || lower.includes('set'))) {
-    const newAbout = msg.replace(/(update|change|write|set)\s+(my\s+)?(about\s+us|about\s+section|about\s+text)\s+to\s+/i, '').replace(/["']/g, '').trim();
-    if (newAbout.length > 5) {
-      settings.aboutText = newAbout;
-      saveJsonFile(SETTINGS_FILE, settings);
-      reply = `✅ Done! About Us section updated. Refresh your store to see the new story!`;
-      action = 'executed';
-    } else {
-      reply = '🤔 Please provide the full About Us text. Example: "Update about us to say we are the best phone shop in Accra"';
-    }
-  }
-
-  // 6. CHANGE WHATSAPP NUMBER
-  else if (lower.includes('whatsapp') && (lower.includes('number') || lower.includes('change') || lower.includes('update'))) {
-    const newNum = msg.replace(/[^0-9+]/g, '').trim();
-    if (newNum.length >= 9) {
-      settings.whatsappNumber = newNum.replace('+', '');
-      saveJsonFile(SETTINGS_FILE, settings);
-      reply = `✅ Done! WhatsApp number updated to ${settings.whatsappNumber}.`;
-      action = 'executed';
-    } else {
-      reply = '🤔 Please provide the full number. Example: "Change WhatsApp number to 233551234567"';
-    }
-  }
-
-  // 7. CHANGE PHONE / EMAIL / ADDRESS
-  else if (lower.includes('phone') && lower.includes('change')) {
-    const num = msg.replace(/[^0-9+ ]/g, '').trim();
-    if (num.length >= 9) { settings.supportPhone = num; saveJsonFile(SETTINGS_FILE, settings); reply = `✅ Phone updated to ${num}.`; action = 'executed'; }
-    else reply = '🤔 Please provide the new phone number.';
-  }
-  else if (lower.includes('email') && lower.includes('change')) {
-    const email = msg.match(/[\w.-]+@[\w.-]+\.\w+/);
-    if (email) { settings.supportEmail = email[0]; saveJsonFile(SETTINGS_FILE, settings); reply = `✅ Email updated to ${email[0]}.`; action = 'executed'; }
-    else reply = '🤔 Please provide the new email address.';
-  }
-  else if (lower.includes('address') && lower.includes('change')) {
-    const addr = msg.replace(/change\s+(my\s+)?(shop\s+)?address\s+to\s+/i, '').replace(/["']/g, '').trim();
-    if (addr.length > 2) { settings.shopAddress = addr; saveJsonFile(SETTINGS_FILE, settings); reply = `✅ Address updated to "${addr}".`; action = 'executed'; }
-    else reply = '🤔 Please provide the new address.';
-  }
-
-  // 8. ADD PRODUCT
-  else if (lower.includes('add') && (lower.includes('product') || lower.includes('item'))) {
+  if (lower.includes('change') && (lower.includes('store name') || lower.includes('shop name'))) {
+    const newName = msg.replace(/change\s+(my\s+)?(store|shop)\s+name\s+to\s+/i, '').replace(/["']/g, '').trim();
+    if (newName) { settings.storeName = newName; saveJsonFile(SETTINGS_FILE, settings); reply = `✅ Done! Store name changed to "${newName}".`; action = 'executed'; }
+  } else if (lower.includes('hero') && (lower.includes('title') || lower.includes('heading'))) {
+    const newTitle = msg.replace(/change\s+(the\s+)?(hero|banner)\s+(title|heading)\s+to\s+/i, '').replace(/["']/g, '').trim();
+    if (newTitle) { settings.heroTitle = newTitle; saveJsonFile(SETTINGS_FILE, settings); reply = `✅ Done! Hero title updated to "${newTitle}".`; action = 'executed'; }
+  } else if (lower.includes('announcement')) {
+    const newAnn = msg.replace(/change\s+(the\s+)?announcement\s+to\s+/i, '').replace(/["']/g, '').trim();
+    if (newAnn) { settings.announcement = newAnn; saveJsonFile(SETTINGS_FILE, settings); reply = `✅ Done! Announcement updated.`; action = 'executed'; }
+  } else if (lower.includes('add') && lower.includes('product')) {
     const nameMatch = msg.match(/(?:called|named|name)\s+["']?([^"']+?)["']?\s+(?:for|at|price)/i) || msg.match(/add\s+(?:a\s+)?(?:product|item)\s+["']?([^"']+?)["']?\s+(?:for|at|price)/i);
     const priceMatch = msg.match(/(\d+[\d,.]*)/);
     if (nameMatch && priceMatch) {
       const pName = nameMatch[1].trim();
       const pPrice = parseFloat(priceMatch[1].replace(',', ''));
-      const newProduct = { id: Date.now(), name: pName, price: pPrice, image: 'https://picsum.photos/id/' + Math.floor(Math.random() * 100) + '/400/300', description: `High quality ${pName}. Order now for fast delivery across Ghana!`, category: 'Other' };
-      products.push(newProduct);
+      products.push({ id: Date.now(), name: pName, price: pPrice, image: 'https://picsum.photos/id/' + Math.floor(Math.random() * 100) + '/400/300', description: `High quality ${pName}.`, category: 'Other' });
       saveJsonFile(PRODUCTS_FILE, products);
-      reply = `✅ Done! "${pName}" added to your store at GH₵${pPrice.toFixed(2)}. Go to the Products tab to upload a real photo and edit the description!`;
+      reply = `✅ Done! "${pName}" added at GH₵${pPrice.toFixed(2)}.`;
       action = 'executed';
-    } else {
-      reply = '🤔 Please include the name and price. Example: "Add product iPhone 15 for 8500"';
     }
-  }
-
-  // 9. DELETE PRODUCT
-  else if (lower.includes('delete') || lower.includes('remove')) {
-    const pName = msg.replace(/(delete|remove)\s+(the\s+)?(product\s+)?/i, '').replace(/["']/g, '').trim();
-    const found = products.find(p => p.name.toLowerCase().includes(pName.toLowerCase()));
-    if (found) {
-      const updated = products.filter(p => p.id !== found.id);
-      saveJsonFile(PRODUCTS_FILE, updated);
-      reply = `✅ Done! "${found.name}" has been removed from your store.`;
-      action = 'executed';
-    } else {
-      reply = `🤔 I couldn't find a product matching "${pName}". Current products: ${products.map(p => p.name).join(', ')}`;
-    }
-  }
-
-  // 10. CHANGE PRODUCT PRICE
-  else if (lower.includes('price') && (lower.includes('change') || lower.includes('update') || lower.includes('set'))) {
-    const priceMatch = msg.match(/(\d+[\d,.]*)/);
-    const pName = msg.replace(/change\s+(the\s+)?price\s+of\s+/i, '').replace(/to\s+\d+.*/i, '').replace(/["']/g, '').trim();
-    const found = products.find(p => p.name.toLowerCase().includes(pName.toLowerCase()));
-    if (found && priceMatch) {
-      found.price = parseFloat(priceMatch[1].replace(',', ''));
-      saveJsonFile(PRODUCTS_FILE, products);
-      reply = `✅ Done! "${found.name}" price updated to GH₵${found.price.toFixed(2)}.`;
-      action = 'executed';
-    } else {
-      reply = '🤔 Example: "Change price of Smart Watch to 450"';
-    }
-  }
-
-  // 11. GENERATE SOCIAL POST
-  else if (lower.includes('social') || lower.includes('instagram') || lower.includes('tiktok') || lower.includes('post') || lower.includes('caption')) {
-    reply = `📱 Ready-to-Post Social Media Caption:\n\n🛍️ ${settings.storeName} - Your #1 Online Shop in Ghana! 🇬🇭\n\n🔥 Hot Deals Available Now!\n✅ 100% Genuine Products\n📱 Pay Instantly with MTN MoMo / Telecel / AT\n🚚 Fast Doorstep Delivery\n\n👉 Shop now: ${settings.shopAddress}\n💬 WhatsApp: ${settings.whatsappNumber}\n\n#GhanaShopping #AccraDeals #GhanaFashion #MoMoPay #ShopWithEase #GhanaBusiness`;
-  }
-
-  // 12. GENERATE WHATSAPP MESSAGE
-  else if (lower.includes('whatsapp') && (lower.includes('message') || lower.includes('draft') || lower.includes('customer'))) {
-    reply = `💬 WhatsApp Customer Message Template:\n\nHello [Customer Name]! 👋\n\nThank you for shopping with ${settings.storeName}! 🛍️\n\nYour order [Reference Code] has been confirmed and is being prepared for dispatch. 📦\n\n🚚 Estimated Delivery: Within 24 hours\n📍 Delivery Address: [Customer Address]\n\nIf you have any questions, reply to this message anytime!\n\nThank you for choosing us! 🇬🇭❤️`;
-  }
-
-  // 13. LIST PRODUCTS
-  else if (lower.includes('list') && lower.includes('product')) {
-    reply = `📦 Current Products (${products.length}):\n\n${products.map((p, i) => `${i + 1}. ${p.name} - GH₵${p.price.toFixed(2)} (${p.category})`).join('\n')}`;
-  }
-
-  // 14. SHOW CURRENT SETTINGS
-  else if (lower.includes('show') && (lower.includes('setting') || lower.includes('config') || lower.includes('current'))) {
-    reply = `⚙️ Current Store Settings:\n\n🏷️ Store Name: ${settings.storeName}\n📢 Announcement: ${settings.announcement}\n🎯 Hero Title: ${settings.heroTitle}\n📱 WhatsApp: ${settings.whatsappNumber}\n📞 Phone: ${settings.supportPhone}\n📧 Email: ${settings.supportEmail}\n📍 Address: ${settings.shopAddress}\n📦 Total Products: ${products.length}`;
-  }
-
-  // 15. HELP / WHAT CAN YOU DO
-  else if (lower.includes('help') || lower.includes('what can you') || lower.includes('commands')) {
-    reply = `🤖 I can help you modify ANYTHING on your store! Try these commands:\n\n🏷️ "Change store name to [name]"\n🎯 "Change hero title to [text]"\n📢 "Change announcement to [text]"\n📖 "Update about us to [your story]"\n📱 "Change WhatsApp number to [number]"\n➕ "Add product [name] for [price]"\n🗑️ "Delete product [name]"\n💰 "Change price of [product] to [price]"\n📱 "Generate social media post"\n💬 "Draft WhatsApp customer message"\n📦 "List all products"\n⚙️ "Show current settings"\n\nJust type naturally and I will understand! 😊`;
-  }
-
-  // 16. GREETING
-  else if (lower.includes('hello') || lower.includes('hi') || lower.includes('hey')) {
-    reply = `Hello! 👋 I'm your AI Store Manager for ${settings.storeName}. I can help you modify anything on your website. Type "help" to see what I can do, or just tell me what you want to change! 😊`;
-  }
-
-  // 17. DEFAULT FALLBACK
-  else {
-    reply = `🤔 I understand you want to: "${msg}"\n\nI can directly execute these types of changes:\n• Change store name, hero title, announcement\n• Update About Us, contact details\n• Add/delete products, change prices\n• Generate marketing content\n\nTry being specific! Example: "Change store name to K-Store" or type "help" for all commands. 😊`;
+  } else if (lower.includes('list') && lower.includes('product')) {
+    reply = `📦 Products (${products.length}):\n\n${products.map((p, i) => `${i + 1}. ${p.name} - GH₵${p.price.toFixed(2)}`).join('\n')}`;
+  } else {
+    reply = `Hello! 👋 Tell me what you want to change, or use the Orders tab to update customers on delivery progress!`;
   }
 
   res.json({ success: true, reply, action });
@@ -320,54 +262,8 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'in
 app.get(['/cart', '/cart.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'cart.html')));
 app.get(['/checkout', '/checkout.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'checkout.html')));
 app.get(['/success', '/success.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'success.html')));
+app.get(['/track', '/track.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'track.html')));
 app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'admin.html')));
-
-// 📦 TRACK PAGE ROUTE
-app.get(['/track', '/track.html'], (req, res) => {
-  const trackPath = path.join(__dirname, '..', 'public', 'track.html');
-  if (fs.existsSync(trackPath)) {
-    return res.sendFile(trackPath);
-  }
-  res.send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Track Your Order</title>
-  <link rel="stylesheet" href="/css/styles.css">
-</head>
-<body>
-  <nav class="navbar"><a href="/" class="navbar-brand">🛍️ Shop with <span>ease</span></a><ul class="navbar-links"><li><a href="/">Home</a></li><li><a href="/cart">Cart</a></li></ul></nav>
-  <div class="page-container" style="max-width:600px; margin-top:3rem; text-align:center;">
-    <div style="background:#fff; padding:2rem; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.05);">
-      <h2>📦 Track Your Order</h2>
-      <p style="color:#6c757d; margin:0.5rem 0 1.2rem;">Enter your Order Reference Code (e.g. jwj3lm0yky):</p>
-      <form id="f" style="display:flex; gap:0.5rem; margin-bottom:1.5rem;">
-        <input type="text" id="ref" placeholder="Order Reference" required style="flex:1; padding:0.8rem; border:1.5px solid #ddd; border-radius:6px; font-size:1rem;">
-        <button type="submit" class="btn" style="width:auto; padding:0.8rem 1.5rem; background:#0a7e8c;">Track</button>
-      </form>
-      <div id="res" style="display:none; text-align:left; background:#f8f9fa; padding:1.2rem; border-radius:8px;"></div>
-    </div>
-  </div>
-  <script>
-    document.getElementById('f').onsubmit = async (e) => {
-      e.preventDefault();
-      const r = document.getElementById('ref').value.trim();
-      const box = document.getElementById('res');
-      box.style.display = 'block';
-      box.innerHTML = 'Searching for order...';
-      const res = await fetch('/api/orders/' + r);
-      const data = await res.json();
-      if (data.success) {
-        const o = data.order;
-        box.innerHTML = '<h3 style="color:#0a7e8c;">Status: ' + o.status + '</h3><p><strong>Code:</strong> ' + o.reference + '<br><strong>Customer:</strong> ' + o.customerName + '<br><strong>Amount:</strong> GH₵' + Number(o.amount).toFixed(2) + '<br><strong>Address:</strong> ' + o.address + '</p><a href="https://wa.me/233536473017?text=Hi, checking order ' + o.reference + '" target="_blank" class="btn" style="background:#25D366; display:block; text-align:center; text-decoration:none; margin-top:1rem;">💬 Chat on WhatsApp</a>';
-      } else {
-        box.innerHTML = '<span style="color:#dc3545;">❌ Order not found. Check reference code.</span>';
-      }
-    };
-  </script>
-</body>
-</html>`);
-});
 
 app.listen(PORT, () => console.log("🚀 ShopWave is live on Port: " + PORT));
 module.exports = app;
