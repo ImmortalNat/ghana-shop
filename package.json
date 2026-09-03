@@ -1,7 +1,6 @@
 {
   "name": "ghana-shop",
   "version": "1.0.0",
-  "description": "Online shop with Paystack and Ghana MoMo integration",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js"
