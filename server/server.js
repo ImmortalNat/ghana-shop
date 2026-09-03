@@ -321,5 +321,53 @@ app.get(['/cart', '/cart.html'], (req, res) => res.sendFile(path.join(__dirname,
 app.get(['/checkout', '/checkout.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'checkout.html')));
 app.get(['/success', '/success.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'success.html')));
 app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'admin.html')));
+
+// 📦 TRACK PAGE ROUTE
+app.get(['/track', '/track.html'], (req, res) => {
+  const trackPath = path.join(__dirname, '..', 'public', 'track.html');
+  if (fs.existsSync(trackPath)) {
+    return res.sendFile(trackPath);
+  }
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Track Your Order</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <nav class="navbar"><a href="/" class="navbar-brand">🛍️ Shop with <span>ease</span></a><ul class="navbar-links"><li><a href="/">Home</a></li><li><a href="/cart">Cart</a></li></ul></nav>
+  <div class="page-container" style="max-width:600px; margin-top:3rem; text-align:center;">
+    <div style="background:#fff; padding:2rem; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.05);">
+      <h2>📦 Track Your Order</h2>
+      <p style="color:#6c757d; margin:0.5rem 0 1.2rem;">Enter your Order Reference Code (e.g. jwj3lm0yky):</p>
+      <form id="f" style="display:flex; gap:0.5rem; margin-bottom:1.5rem;">
+        <input type="text" id="ref" placeholder="Order Reference" required style="flex:1; padding:0.8rem; border:1.5px solid #ddd; border-radius:6px; font-size:1rem;">
+        <button type="submit" class="btn" style="width:auto; padding:0.8rem 1.5rem; background:#0a7e8c;">Track</button>
+      </form>
+      <div id="res" style="display:none; text-align:left; background:#f8f9fa; padding:1.2rem; border-radius:8px;"></div>
+    </div>
+  </div>
+  <script>
+    document.getElementById('f').onsubmit = async (e) => {
+      e.preventDefault();
+      const r = document.getElementById('ref').value.trim();
+      const box = document.getElementById('res');
+      box.style.display = 'block';
+      box.innerHTML = 'Searching for order...';
+      const res = await fetch('/api/orders/' + r);
+      const data = await res.json();
+      if (data.success) {
+        const o = data.order;
+        box.innerHTML = '<h3 style="color:#0a7e8c;">Status: ' + o.status + '</h3><p><strong>Code:</strong> ' + o.reference + '<br><strong>Customer:</strong> ' + o.customerName + '<br><strong>Amount:</strong> GH₵' + Number(o.amount).toFixed(2) + '<br><strong>Address:</strong> ' + o.address + '</p><a href="https://wa.me/233536473017?text=Hi, checking order ' + o.reference + '" target="_blank" class="btn" style="background:#25D366; display:block; text-align:center; text-decoration:none; margin-top:1rem;">💬 Chat on WhatsApp</a>';
+      } else {
+        box.innerHTML = '<span style="color:#dc3545;">❌ Order not found. Check reference code.</span>';
+      }
+    };
+  </script>
+</body>
+</html>`);
+});
+
 app.listen(PORT, () => console.log("🚀 ShopWave is live on Port: " + PORT));
 module.exports = app;
