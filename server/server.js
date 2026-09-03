@@ -58,9 +58,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/api/payment', paymentRoutes);
 
-// ==================== GHANA SMS GATEWAY INTEGRATION ====================
-
-// Format local phone numbers to international GHS format (e.g. 0536473017 -> 233536473017)
+// Phone Formatter for Ghana
 function formatGhanaPhone(phone) {
   let clean = (phone || '').replace(/[^0-9]/g, '');
   if (clean.startsWith('0')) {
@@ -71,7 +69,7 @@ function formatGhanaPhone(phone) {
   return clean;
 }
 
-// Send automated SMS using Arkesel SMS API
+// SMS Gateway Helper
 async function sendProgressSMS(to, storeName, ref, status, note) {
   const apiKey = process.env.SMS_API_KEY;
   const senderId = (process.env.SMS_SENDER_ID || 'ShopWave').substring(0, 11);
@@ -86,27 +84,23 @@ async function sendProgressSMS(to, storeName, ref, status, note) {
   const message = `Hello! ${statusHeader}\n\nStore: ${storeName}\nOrder: ${ref}\nUpdate: ${note}\n\n🔍 Live Tracking:\n${trackLink}\n\nThank you!`;
 
   if (!apiKey || apiKey.includes('YOUR_')) {
-    console.log(`\n📝 [SMS Demo Log (Set SMS_API_KEY to send for real)]`);
-    console.log(`To: ${formattedPhone}\nMessage:\n${message}\n`);
+    console.log(`\n📝 [SMS Console Output]\nTo: ${formattedPhone}\nMessage:\n${message}\n`);
     return { success: false, reason: 'Console logged (API Key missing)' };
   }
 
   try {
     const url = `https://api.arkesel.com/sms/api?action=send-sms&api_key=${apiKey}&to=${formattedPhone}&from=${senderId}&sms=${encodeURIComponent(message)}`;
     const response = await axios.get(url);
-    console.log(`✅ SMS successfully dispatched to ${formattedPhone}:`, response.data);
     return { success: true, data: response.data };
   } catch (err) {
-    console.error('❌ SMS Gateway Error:', err.message);
     return { success: false, error: err.message };
   }
 }
 
-// Store APIs
+// APIs
 app.get('/api/products', (req, res) => res.json(getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS)));
 app.get('/api/settings', (req, res) => res.json(getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS)));
 
-// Live Tracking Page Endpoint
 app.get('/api/orders/:ref', async (req, res) => {
   const ref = (req.params.ref || '').trim();
   const orders = getJsonFile(ORDERS_FILE, []);
@@ -150,7 +144,6 @@ app.post('/api/admin/orders', verifyAdmin, (req, res) => {
   res.json({ success: true, orders: getJsonFile(ORDERS_FILE, []).reverse() });
 });
 
-// ==================== UPDATE STATUS AND AUTO-SEND SMS ====================
 app.post('/api/admin/update-progress', verifyAdmin, async (req, res) => {
   const { reference, status, deliveryNote } = req.body;
   const orders = getJsonFile(ORDERS_FILE, []);
@@ -163,7 +156,6 @@ app.post('/api/admin/update-progress', verifyAdmin, async (req, res) => {
     order.updatedAt = new Date().toISOString();
     saveJsonFile(ORDERS_FILE, orders);
 
-    // Trigger Automatic SMS Alert
     await sendProgressSMS(
       order.phone,
       settings.storeName,
@@ -203,67 +195,91 @@ app.post('/api/admin/settings/save', verifyAdmin, (req, res) => {
   res.json({ success: true, settings: updated });
 });
 
-// AI Store Manager API
-app.post('/api/admin/ai/chat', verifyAdmin, async (req, res) => {
-  const { message } = req.body;
-  const msg = (message || '').trim();
-  const lower = msg.toLowerCase();
-  const settings = getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS);
-  const products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
-
-  if (process.env.OPENAI_API_KEY) {
-    try {
-      const aiRes = await axios.post('https://api.openai.com/v1/chat/completions', {
-        model: 'gpt-3.5-turbo',
-        messages: [
-          { role: 'system', content: `You are an AI store manager for "${settings.storeName}". Current products: ${products.map(p => p.name + ' GH₵' + p.price).join(', ')}.` },
-          { role: 'user', content: msg }
-        ],
-        max_tokens: 400
-      }, { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` } });
-      return res.json({ success: true, reply: aiRes.data.choices[0].message.content.trim(), action: 'info' });
-    } catch (err) {}
-  }
-
-  let reply = '';
-  let action = 'info';
-
-  if (lower.includes('change') && (lower.includes('store name') || lower.includes('shop name'))) {
-    const newName = msg.replace(/change\s+(my\s+)?(store|shop)\s+name\s+to\s+/i, '').replace(/["']/g, '').trim();
-    if (newName) { settings.storeName = newName; saveJsonFile(SETTINGS_FILE, settings); reply = `✅ Done! Store name changed to "${newName}".`; action = 'executed'; }
-  } else if (lower.includes('hero') && (lower.includes('title') || lower.includes('heading'))) {
-    const newTitle = msg.replace(/change\s+(the\s+)?(hero|banner)\s+(title|heading)\s+to\s+/i, '').replace(/["']/g, '').trim();
-    if (newTitle) { settings.heroTitle = newTitle; saveJsonFile(SETTINGS_FILE, settings); reply = `✅ Done! Hero title updated to "${newTitle}".`; action = 'executed'; }
-  } else if (lower.includes('announcement')) {
-    const newAnn = msg.replace(/change\s+(the\s+)?announcement\s+to\s+/i, '').replace(/["']/g, '').trim();
-    if (newAnn) { settings.announcement = newAnn; saveJsonFile(SETTINGS_FILE, settings); reply = `✅ Done! Announcement updated.`; action = 'executed'; }
-  } else if (lower.includes('add') && lower.includes('product')) {
-    const nameMatch = msg.match(/(?:called|named|name)\s+["']?([^"']+?)["']?\s+(?:for|at|price)/i) || msg.match(/add\s+(?:a\s+)?(?:product|item)\s+["']?([^"']+?)["']?\s+(?:for|at|price)/i);
-    const priceMatch = msg.match(/(\d+[\d,.]*)/);
-    if (nameMatch && priceMatch) {
-      const pName = nameMatch[1].trim();
-      const pPrice = parseFloat(priceMatch[1].replace(',', ''));
-      products.push({ id: Date.now(), name: pName, price: pPrice, image: 'https://picsum.photos/id/' + Math.floor(Math.random() * 100) + '/400/300', description: `High quality ${pName}.`, category: 'Other' });
-      saveJsonFile(PRODUCTS_FILE, products);
-      reply = `✅ Done! "${pName}" added at GH₵${pPrice.toFixed(2)}.`;
-      action = 'executed';
-    }
-  } else if (lower.includes('list') && lower.includes('product')) {
-    reply = `📦 Products (${products.length}):\n\n${products.map((p, i) => `${i + 1}. ${p.name} - GH₵${p.price.toFixed(2)}`).join('\n')}`;
-  } else {
-    reply = `Hello! 👋 Tell me what you want to change, or use the Orders tab to update customers on delivery progress!`;
-  }
-
-  res.json({ success: true, reply, action });
-});
-
-// Page routes
+// ==================== ALL PAGE ROUTES ====================
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
 app.get(['/cart', '/cart.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'cart.html')));
 app.get(['/checkout', '/checkout.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'checkout.html')));
 app.get(['/success', '/success.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'success.html')));
-app.get(['/track', '/track.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'track.html')));
 app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'admin.html')));
 
+// 📦 GUARANTEED TRACK ROUTE
+app.get(['/track', '/track.html'], (req, res) => {
+  const trackPath = path.join(__dirname, '..', 'public', 'track.html');
+  if (fs.existsSync(trackPath)) {
+    return res.sendFile(trackPath);
+  }
+
+  // Backup inline template if track.html file is missing
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Track Your Order - Shop with ease</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .timeline { margin: 2rem 0; text-align: left; }
+    .step { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; }
+    .circle { width: 34px; height: 34px; border-radius: 50%; background: #dee2e6; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
+    .circle.active { background: #ff6b35; }
+    .circle.done { background: #28a745; }
+    .note-box { background: #eef7f8; border-left: 5px solid #0a7e8c; padding: 1rem; border-radius: 6px; margin: 1rem 0; text-align: left; }
+  </style>
+</head>
+<body>
+  <nav class="navbar"><a href="/" class="navbar-brand">🛍️ Shop with <span>ease</span></a><ul class="navbar-links"><li><a href="/">Home</a></li><li><a href="/cart">Cart</a></li></ul></nav>
+  <div class="page-container" style="max-width:600px; margin-top:3rem; text-align:center;">
+    <div style="background:#fff; padding:2rem; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.05);">
+      <h2>📦 Track Your Order</h2>
+      <p style="color:#6c757d; margin:0.5rem 0 1.2rem;">Enter your Order Reference Code:</p>
+      <form id="f" style="display:flex; gap:0.5rem; margin-bottom:1.5rem;">
+        <input type="text" id="ref" placeholder="e.g. jwj3lm0yky" required style="flex:1; padding:0.8rem; border:1.5px solid #ddd; border-radius:6px; font-size:1rem;">
+        <button type="submit" class="btn" style="width:auto; padding:0.8rem 1.5rem; background:#0a7e8c;">Track</button>
+      </form>
+      <div id="res" style="display:none; text-align:left;">
+        <h3 id="stText" style="color:#0a7e8c;"></h3>
+        <div class="note-box" id="noteText"></div>
+        <div id="detailsText" style="background:#f8f9fa; padding:1rem; border-radius:6px; font-size:0.9rem; line-height:1.6; border:1px solid #ddd;"></div>
+        <div class="timeline">
+          <div class="step"><div class="circle done" id="s1">✓</div><div><strong>1. Order Confirmed & Paid</strong></div></div>
+          <div class="step"><div class="circle" id="s2">2</div><div><strong>2. Packaging & Processing</strong></div></div>
+          <div class="step"><div class="circle" id="s3">3</div><div><strong>3. Out for Delivery (Rider Dispatched)</strong></div></div>
+          <div class="step"><div class="circle" id="s4">4</div><div><strong>4. Delivered</strong></div></div>
+        </div>
+        <a id="wa" href="#" target="_blank" class="btn" style="background:#25D366; display:block; text-align:center; text-decoration:none; margin-top:1rem;">💬 Chat on WhatsApp</a>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.getElementById('f').onsubmit = async (e) => {
+      e.preventDefault();
+      const r = document.getElementById('ref').value.trim();
+      const box = document.getElementById('res');
+      box.style.display = 'block';
+      document.getElementById('stText').textContent = 'Searching...';
+      const res = await fetch('/api/orders/' + r);
+      const data = await res.json();
+      if (data.success) {
+        const o = data.order;
+        document.getElementById('stText').textContent = 'Status: ' + o.status;
+        document.getElementById('noteText').innerHTML = '<strong>Latest Update:</strong><br>' + (o.deliveryNote || 'Order confirmed and being prepared.');
+        document.getElementById('detailsText').innerHTML = '<strong>Code:</strong> ' + o.reference + '<br><strong>Customer:</strong> ' + o.customerName + '<br><strong>Amount:</strong> GH₵' + Number(o.amount).toFixed(2) + '<br><strong>Address:</strong> ' + o.address;
+        ['s1','s2','s3','s4'].forEach(id => document.getElementById(id).className = 'circle');
+        document.getElementById('s1').className = 'circle done';
+        if (o.status === 'Packaging') document.getElementById('s2').className = 'circle active';
+        if (o.status === 'Out for Delivery') { document.getElementById('s2').className = 'circle done'; document.getElementById('s3').className = 'circle active'; }
+        if (o.status === 'Delivered') { document.getElementById('s2').className = 'circle done'; document.getElementById('s3').className = 'circle done'; document.getElementById('s4').className = 'circle done'; }
+        document.getElementById('wa').href = 'https://wa.me/233536473017?text=' + encodeURIComponent('Hi, checking order: ' + o.reference);
+      } else {
+        document.getElementById('stText').innerHTML = '<span style="color:red;">❌ Order not found. Check reference code.</span>';
+        document.getElementById('noteText').style.display = 'none';
+        document.getElementById('detailsText').innerHTML = '';
+      }
+    };
+    const urlRef = new URLSearchParams(window.location.search).get('ref');
+    if (urlRef) { document.getElementById('ref').value = urlRef; document.getElementById('f').dispatchEvent(new Event('submit')); }
+  </script>
+</body>
+</html>`);
+});
+
 app.listen(PORT, () => console.log("🚀 ShopWave is live on Port: " + PORT));
-module.exports = app;
