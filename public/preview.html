@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Preview & Paywall - Shop with ease</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .preview-box { position: relative; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.12); height: 75vh; }
+    .preview-frame { width: 100%; height: 100%; border: none; }
+    .paywall { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to bottom, transparent 0%, rgba(26,54,93,0.98) 40%); padding: 3rem 2rem; text-align: center; color: #fff; }
+    .unlock-btn { background: #ff6b35; color: #fff; font-size: 1.15rem; font-weight: bold; padding: 1rem 2.2rem; border: none; border-radius: 8px; cursor: pointer; margin-top: 1rem; box-shadow: 0 4px 15px rgba(255,107,53,0.4); transition: 0.2s; }
+    .unlock-btn:hover { background: #e55a2b; transform: scale(1.03); }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">🛍️ Shop with <span>ease</span></a>
+    <ul class="navbar-links"><li><a href="/">← Back to Store</a></li></ul>
+  </nav>
+
+  <div class="page-container" style="max-width: 900px; margin-top: 2rem;">
+    <div style="background:#fff; padding:1.5rem; border-radius:12px 12px 0 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+      <div>
+        <h2 id="pTitle" style="color:#0a7e8c; margin:0;">Loading Book Preview...</h2>
+        <span id="pAuthor" style="color:#6c757d; font-size:0.9rem;"></span>
+      </div>
+      <button class="btn" style="width:auto; padding:0.7rem 1.5rem; background:#ff6b35;" onclick="buyBook()">
+        🔓 Unlock Full Book
+      </button>
+    </div>
+
+    <!-- Free Sample Viewer + Paywall -->
+    <div class="preview-box">
+      <iframe id="pFrame" class="preview-frame" src=""></iframe>
+      
+      <div class="paywall">
+        <h2>🔒 Free Preview Mode</h2>
+        <p style="font-size:0.95rem; opacity:0.9; max-width:550px; margin:0.3rem auto 1rem;">
+          You are reading the free sample. To unlock all pages and download the full PDF book, complete payment below.
+        </p>
+        <div id="pPrice" style="color:#f59e0b; font-size:1.8rem; font-weight:800;"></div>
+        <button class="unlock-btn" onclick="buyBook()">
+          🔓 Pay & Download Full PDF Book 📥
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const id = window.location.pathname.split('/').pop();
+    let book = null;
+
+    function getCart() { return JSON.parse(localStorage.getItem('shopwave_cart') || '[]'); }
+    function saveCart(c) { localStorage.setItem('shopwave_cart', JSON.stringify(c)); }
+
+    fetch('/api/products/' + id + '/preview')
+      .then(r => r.json())
+      .then(d => {
+        book = d;
+        document.getElementById('pTitle').textContent = d.name;
+        document.getElementById('pAuthor').textContent = 'By ' + d.author + ' • ' + d.pages + ' pages';
+        document.getElementById('pPrice').textContent = 'GH₵ ' + Number(d.price).toFixed(2);
+        document.getElementById('pFrame').src = d.previewUrl;
+      });
+
+    function buyBook() {
+      if (!book) return;
+      const c = getCart();
+      if (!c.find(x => x.id === book.id)) {
+        c.push({ id: book.id, name: book.name, price: book.price, qty: 1, image: '' });
+      }
+      saveCart(c);
+      window.location.href = '/checkout';
+    }
+  </script>
+</body>
+</html>
