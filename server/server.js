@@ -13,29 +13,64 @@ const ORDERS_FILE = path.join(__dirname, 'orders.json');
 const PRODUCTS_FILE = path.join(__dirname, 'products.json');
 const SETTINGS_FILE = path.join(__dirname, 'settings.json');
 
+// Default initial catalog
 const DEFAULT_PRODUCTS = [
-  { id: 1, name: "Wireless Headphones", price: 250, image: "https://picsum.photos/id/1/400/300", description: "Premium noise cancellation headphones.", category: "Electronics" },
-  { id: 2, name: "Smart Watch", price: 380, image: "https://picsum.photos/id/2/400/300", description: "Health monitoring smartwatch.", category: "Electronics" },
-  { id: 3, name: "Running Sneakers", price: 290, image: "https://picsum.photos/id/3/400/300", description: "Lightweight running shoes.", category: "Fashion" },
-  { id: 4, name: "Leather Backpack", price: 180, image: "https://picsum.photos/id/4/400/300", description: "Genuine leather laptop backpack.", category: "Fashion" },
-  { id: 5, name: "Bluetooth Speaker", price: 130, image: "https://picsum.photos/id/5/400/300", description: "Waterproof portable speaker.", category: "Electronics" },
-  { id: 6, name: "Automatic Coffee Maker", price: 320, image: "https://picsum.photos/id/6/400/300", description: "Drip coffee machine.", category: "Home" }
+  // 📚 eBooks with Free Preview + Paid Full Access
+  {
+    id: 1,
+    name: "Starting a Business in Ghana (PDF Guide)",
+    author: "Kwame Mensah",
+    price: 50,
+    pages: 145,
+    category: "Online Books",
+    image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400",
+    description: "The complete practical guide to starting, funding, and running a profitable business in Ghana.",
+    previewUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", // Free sample
+    downloadUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" // Full book (Protected)
+  },
+  {
+    id: 2,
+    name: "Personal Finance & T-Bill Investment (eBook)",
+    author: "E. Osei",
+    price: 45,
+    pages: 110,
+    category: "Online Books",
+    image: "https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=400",
+    description: "Learn how to budget, save, and invest in Treasury Bills and real estate in Ghana.",
+    previewUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+    downloadUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+  },
+  // 🛍️ Physical Items
+  {
+    id: 3,
+    name: "Wireless Headphones",
+    price: 250,
+    category: "Electronics",
+    image: "https://picsum.photos/id/1/400/300",
+    description: "Premium noise cancellation headphones with deep bass."
+  },
+  {
+    id: 4,
+    name: "Running Sneakers",
+    price: 290,
+    category: "Fashion",
+    image: "https://picsum.photos/id/3/400/300",
+    description: "Lightweight running shoes for daily workouts."
+  }
 ];
 
 const DEFAULT_SETTINGS = {
   storeName: "Shop with ease",
-  announcement: "⚡ Welcome! Fast delivery across Ghana 🇬🇭",
-  heroTitle: "Shop Quality Products with Ease",
-  heroSubtitle: "Instant payments with MTN MoMo, Telecel Cash, AT Money, and Bank Cards.",
+  announcement: "⚡ Read sample previews for free! Full PDF unlocked right after MoMo payment 🇬🇭",
+  heroTitle: "Shop Quality Products & Instant eBooks",
+  heroSubtitle: "Read sample book previews for free. Pay securely with MoMo or Card to download full books.",
   whatsappNumber: "233536473017",
   supportPhone: "0536473017",
   supportEmail: "support@shopwithease.com",
   shopAddress: "Accra, Ghana",
   aboutTitle: "About Shop with ease",
-  aboutText: "Ghana's trusted online shopping destination for quality products with fast delivery.",
-  aboutImage: "https://images.unsplash.com/photo-1556742049-0a67e55722c3?w=600",
-  instagramUrl: "",
-  tiktokUrl: ""
+  aboutText: "We are Ghana's trusted store for quality physical items and softcopy educational books with instant MoMo checkout.",
+  aboutImage: "https://images.unsplash.com/photo-1556742049-0a67e55722c3?w=600"
 };
 
 function getJsonFile(file, defaultData) {
@@ -58,53 +93,48 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/api/payment', paymentRoutes);
 
-// Phone Formatter for Ghana
-function formatGhanaPhone(phone) {
-  let clean = (phone || '').replace(/[^0-9]/g, '');
-  if (clean.startsWith('0')) {
-    clean = '233' + clean.substring(1);
-  } else if (clean.length === 9) {
-    clean = '233' + clean;
-  }
-  return clean;
-}
+// PUBLIC PRODUCTS API (Secured: Strips full downloadUrl so customers cannot steal books)
+app.get('/api/products', (req, res) => {
+  const products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
+  const safeProducts = products.map(p => ({
+    id: p.id,
+    name: p.name,
+    author: p.author,
+    price: p.price,
+    pages: p.pages,
+    category: p.category,
+    image: p.image,
+    description: p.description,
+    previewUrl: p.previewUrl // Public sample preview
+  }));
+  res.json(safeProducts);
+});
 
-// SMS Gateway Helper
-async function sendProgressSMS(to, storeName, ref, status, note) {
-  const apiKey = process.env.SMS_API_KEY;
-  const senderId = (process.env.SMS_SENDER_ID || 'ShopWave').substring(0, 11);
-  const formattedPhone = formatGhanaPhone(to);
-  const trackLink = `${process.env.BASE_URL || 'https://shop-wave-shop.onrender.com'}/track?ref=${ref}`;
+// PREVIEW DETAILS API
+app.get('/api/products/:id/preview', (req, res) => {
+  const products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
+  const p = products.find(x => x.id === Number(req.params.id));
+  if (!p) return res.status(404).json({ error: 'Book not found' });
+  res.json({
+    id: p.id,
+    name: p.name,
+    author: p.author || 'N/A',
+    price: p.price,
+    pages: p.pages || '--',
+    description: p.description,
+    previewUrl: p.previewUrl || "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+  });
+});
 
-  let statusHeader = '';
-  if (status === 'Out for Delivery') statusHeader = '🚚 OUT FOR DELIVERY!';
-  else if (status === 'Delivered') statusHeader = '🟢 DELIVERED!';
-  else statusHeader = '📦 ORDER UPDATED!';
-
-  const message = `Hello! ${statusHeader}\n\nStore: ${storeName}\nOrder: ${ref}\nUpdate: ${note}\n\n🔍 Live Tracking:\n${trackLink}\n\nThank you!`;
-
-  if (!apiKey || apiKey.includes('YOUR_')) {
-    console.log(`\n📝 [SMS Console Output]\nTo: ${formattedPhone}\nMessage:\n${message}\n`);
-    return { success: false, reason: 'Console logged (API Key missing)' };
-  }
-
-  try {
-    const url = `https://api.arkesel.com/sms/api?action=send-sms&api_key=${apiKey}&to=${formattedPhone}&from=${senderId}&sms=${encodeURIComponent(message)}`;
-    const response = await axios.get(url);
-    return { success: true, data: response.data };
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-}
-
-// APIs
-app.get('/api/products', (req, res) => res.json(getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS)));
 app.get('/api/settings', (req, res) => res.json(getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS)));
 
+// ORDER VERIFICATION & FULL BOOK UNLOCK
 app.get('/api/orders/:ref', async (req, res) => {
   const ref = (req.params.ref || '').trim();
   const orders = getJsonFile(ORDERS_FILE, []);
+  const products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
   let order = orders.find(o => o.reference && o.reference.toLowerCase() === ref.toLowerCase());
+
   if (order) return res.json({ success: true, order });
 
   try {
@@ -112,6 +142,20 @@ app.get('/api/orders/:ref', async (req, res) => {
     const pr = await axios.get(`https://api.paystack.co/transaction/verify/${ref}`, { headers: { Authorization: `Bearer ${ps}` } });
     if (pr.data.status && pr.data.data.status === 'success') {
       const tx = pr.data.data;
+      const cartItems = tx.metadata?.cartItems || [];
+
+      // Unlock complete full download URLs for paid books
+      let downloads = [];
+      if (Array.isArray(cartItems) && cartItems.length > 0) {
+        cartItems.forEach(item => {
+          const matched = products.find(p => p.id === item.id || p.name === item.name);
+          if (matched && matched.downloadUrl) {
+            downloads.push({ name: item.name, downloadUrl: matched.downloadUrl });
+          }
+        });
+      }
+
+      const isDigital = downloads.length > 0;
       const no = {
         reference: tx.reference,
         amount: tx.amount / 100,
@@ -119,11 +163,13 @@ app.get('/api/orders/:ref', async (req, res) => {
         customerName: tx.metadata?.customerName || tx.customer.email,
         phone: tx.metadata?.phone || (tx.authorization?.mobile_money_number || 'N/A'),
         address: tx.metadata?.address || 'Accra',
-        items: tx.metadata?.itemsSummary || 'Store Order',
-        status: 'Packaging',
-        deliveryNote: 'Your order is being packaged and prepared for delivery.',
+        items: tx.metadata?.itemsSummary || 'Order Items',
+        status: isDigital ? 'Delivered' : 'Packaging',
+        downloads: downloads,
+        deliveryNote: isDigital ? 'Full book unlocked! Download your complete PDF below.' : 'Order is being packaged for dispatch.',
         paidAt: tx.paid_at || new Date().toISOString()
       };
+
       orders.push(no);
       saveJsonFile(ORDERS_FILE, orders);
       return res.json({ success: true, order: no });
@@ -132,6 +178,7 @@ app.get('/api/orders/:ref', async (req, res) => {
   res.status(404).json({ success: false, message: 'Order not found' });
 });
 
+// Admin Authentication
 function verifyAdmin(req, res, next) {
   const { password } = req.body;
   if (password !== (process.env.ADMIN_PASSWORD || 'admin123')) {
@@ -140,31 +187,18 @@ function verifyAdmin(req, res, next) {
   next();
 }
 
-app.post('/api/admin/orders', verifyAdmin, (req, res) => {
-  res.json({ success: true, orders: getJsonFile(ORDERS_FILE, []).reverse() });
-});
+app.post('/api/admin/orders', verifyAdmin, (req, res) => res.json({ success: true, orders: getJsonFile(ORDERS_FILE, []).reverse() }));
 
-app.post('/api/admin/update-progress', verifyAdmin, async (req, res) => {
+app.post('/api/admin/update-progress', verifyAdmin, (req, res) => {
   const { reference, status, deliveryNote } = req.body;
   const orders = getJsonFile(ORDERS_FILE, []);
-  const settings = getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS);
   const order = orders.find(o => o.reference && o.reference.toLowerCase() === (reference || '').toLowerCase());
-  
   if (order) {
     order.status = status || order.status;
     order.deliveryNote = deliveryNote || order.deliveryNote || '';
     order.updatedAt = new Date().toISOString();
     saveJsonFile(ORDERS_FILE, orders);
-
-    await sendProgressSMS(
-      order.phone,
-      settings.storeName,
-      order.reference,
-      order.status,
-      order.deliveryNote
-    );
-
-    return res.json({ success: true, message: 'Order progress updated and SMS dispatched!' });
+    return res.json({ success: true, message: 'Order updated' });
   }
   res.status(404).json({ success: false, message: 'Order not found' });
 });
@@ -190,96 +224,18 @@ app.post('/api/admin/products/delete', verifyAdmin, (req, res) => {
 
 app.post('/api/admin/settings/save', verifyAdmin, (req, res) => {
   const current = getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS);
-  const updated = { ...current, ...req.body.settings };
-  saveJsonFile(SETTINGS_FILE, updated);
-  res.json({ success: true, settings: updated });
+  saveJsonFile(SETTINGS_FILE, { ...current, ...req.body.settings });
+  res.json({ success: true });
 });
 
-// ==================== ALL PAGE ROUTES ====================
+// Page routes
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
+app.get('/preview/:id', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'preview.html')));
 app.get(['/cart', '/cart.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'cart.html')));
 app.get(['/checkout', '/checkout.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'checkout.html')));
 app.get(['/success', '/success.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'success.html')));
+app.get(['/track', '/track.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'track.html')));
 app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'admin.html')));
 
-// 📦 GUARANTEED TRACK ROUTE
-app.get(['/track', '/track.html'], (req, res) => {
-  const trackPath = path.join(__dirname, '..', 'public', 'track.html');
-  if (fs.existsSync(trackPath)) {
-    return res.sendFile(trackPath);
-  }
-
-  // Backup inline template if track.html file is missing
-  res.send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Track Your Order - Shop with ease</title>
-  <link rel="stylesheet" href="/css/styles.css">
-  <style>
-    .timeline { margin: 2rem 0; text-align: left; }
-    .step { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; }
-    .circle { width: 34px; height: 34px; border-radius: 50%; background: #dee2e6; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
-    .circle.active { background: #ff6b35; }
-    .circle.done { background: #28a745; }
-    .note-box { background: #eef7f8; border-left: 5px solid #0a7e8c; padding: 1rem; border-radius: 6px; margin: 1rem 0; text-align: left; }
-  </style>
-</head>
-<body>
-  <nav class="navbar"><a href="/" class="navbar-brand">🛍️ Shop with <span>ease</span></a><ul class="navbar-links"><li><a href="/">Home</a></li><li><a href="/cart">Cart</a></li></ul></nav>
-  <div class="page-container" style="max-width:600px; margin-top:3rem; text-align:center;">
-    <div style="background:#fff; padding:2rem; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.05);">
-      <h2>📦 Track Your Order</h2>
-      <p style="color:#6c757d; margin:0.5rem 0 1.2rem;">Enter your Order Reference Code:</p>
-      <form id="f" style="display:flex; gap:0.5rem; margin-bottom:1.5rem;">
-        <input type="text" id="ref" placeholder="e.g. jwj3lm0yky" required style="flex:1; padding:0.8rem; border:1.5px solid #ddd; border-radius:6px; font-size:1rem;">
-        <button type="submit" class="btn" style="width:auto; padding:0.8rem 1.5rem; background:#0a7e8c;">Track</button>
-      </form>
-      <div id="res" style="display:none; text-align:left;">
-        <h3 id="stText" style="color:#0a7e8c;"></h3>
-        <div class="note-box" id="noteText"></div>
-        <div id="detailsText" style="background:#f8f9fa; padding:1rem; border-radius:6px; font-size:0.9rem; line-height:1.6; border:1px solid #ddd;"></div>
-        <div class="timeline">
-          <div class="step"><div class="circle done" id="s1">✓</div><div><strong>1. Order Confirmed & Paid</strong></div></div>
-          <div class="step"><div class="circle" id="s2">2</div><div><strong>2. Packaging & Processing</strong></div></div>
-          <div class="step"><div class="circle" id="s3">3</div><div><strong>3. Out for Delivery (Rider Dispatched)</strong></div></div>
-          <div class="step"><div class="circle" id="s4">4</div><div><strong>4. Delivered</strong></div></div>
-        </div>
-        <a id="wa" href="#" target="_blank" class="btn" style="background:#25D366; display:block; text-align:center; text-decoration:none; margin-top:1rem;">💬 Chat on WhatsApp</a>
-      </div>
-    </div>
-  </div>
-  <script>
-    document.getElementById('f').onsubmit = async (e) => {
-      e.preventDefault();
-      const r = document.getElementById('ref').value.trim();
-      const box = document.getElementById('res');
-      box.style.display = 'block';
-      document.getElementById('stText').textContent = 'Searching...';
-      const res = await fetch('/api/orders/' + r);
-      const data = await res.json();
-      if (data.success) {
-        const o = data.order;
-        document.getElementById('stText').textContent = 'Status: ' + o.status;
-        document.getElementById('noteText').innerHTML = '<strong>Latest Update:</strong><br>' + (o.deliveryNote || 'Order confirmed and being prepared.');
-        document.getElementById('detailsText').innerHTML = '<strong>Code:</strong> ' + o.reference + '<br><strong>Customer:</strong> ' + o.customerName + '<br><strong>Amount:</strong> GH₵' + Number(o.amount).toFixed(2) + '<br><strong>Address:</strong> ' + o.address;
-        ['s1','s2','s3','s4'].forEach(id => document.getElementById(id).className = 'circle');
-        document.getElementById('s1').className = 'circle done';
-        if (o.status === 'Packaging') document.getElementById('s2').className = 'circle active';
-        if (o.status === 'Out for Delivery') { document.getElementById('s2').className = 'circle done'; document.getElementById('s3').className = 'circle active'; }
-        if (o.status === 'Delivered') { document.getElementById('s2').className = 'circle done'; document.getElementById('s3').className = 'circle done'; document.getElementById('s4').className = 'circle done'; }
-        document.getElementById('wa').href = 'https://wa.me/233536473017?text=' + encodeURIComponent('Hi, checking order: ' + o.reference);
-      } else {
-        document.getElementById('stText').innerHTML = '<span style="color:red;">❌ Order not found. Check reference code.</span>';
-        document.getElementById('noteText').style.display = 'none';
-        document.getElementById('detailsText').innerHTML = '';
-      }
-    };
-    const urlRef = new URLSearchParams(window.location.search).get('ref');
-    if (urlRef) { document.getElementById('ref').value = urlRef; document.getElementById('f').dispatchEvent(new Event('submit')); }
-  </script>
-</body>
-</html>`);
-});
-
-app.listen(PORT, () => console.log("🚀 ShopWave is live on Port: " + PORT));
+app.listen(PORT, () => console.log("🚀 Shop with ease is live on Port: " + PORT));
+module.exports = app;
