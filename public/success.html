@@ -18,7 +18,7 @@
       <h2 style="color:var(--success);" id="successHeader">Payment Confirmed!</h2>
       <p id="statusMsg">Verifying payment with Paystack...</p>
 
-      <!-- INSTANT DOWNLOAD AREA (Unlocked for instant card/paystack momo) -->
+      <!-- INSTANT DOWNLOAD AREA -->
       <div id="dl" style="display:none;" class="dl-box">
         <h3>🔓 Full eBook Unlocked!</h3>
         <div id="dlList"></div>
@@ -28,14 +28,14 @@
       <div id="momoHold" style="display:none;" class="momo-hold-box">
         <h3 style="color:#b7791f; margin-bottom:0.5rem;">🔒 Awaiting MoMo Verification</h3>
         <p style="color:#4a5568; font-size:0.95rem; line-height:1.6;">
-          Your direct MoMo submission has been logged! To instantly unlock your PDF book download, please tap the WhatsApp button below to send Nathaniel your <strong>Transaction ID / Reference</strong>.
+          Your Direct MoMo submission to <strong>Mary Appiah (0536473017)</strong> has been logged! To instantly activate your PDF download, please tap the WhatsApp button below to message us your <strong>Transaction ID / Reference</strong>.
         </p>
       </div>
 
       <div id="tx" style="text-align:left;background:#f8f9fa;padding:1.2rem;border-radius:8px;font-size:0.9rem;margin-top:1rem;border:1px solid #ddd;"></div>
       
       <a id="waContact" href="#" target="_blank" class="btn" style="background:#25D366; display:block; text-align:center; text-decoration:none; margin-top:1.5rem; padding: 0.8rem;">
-        💬 Chat with Nathaniel on WhatsApp
+        💬 Chat on WhatsApp (0536473017)
       </a>
       
       <a href="/" class="btn" style="display:block;margin-top:1rem;background:#6c757d;">Browse More Books</a>
@@ -43,7 +43,7 @@
   </div>
   <script>
     const ref = new URLSearchParams(window.location.search).get('reference');
-    const personalWhatsApp = "233536473017"; // Your WhatsApp number
+    const personalWhatsApp = "233536473017";
 
     if (ref) {
       fetch('/api/orders/' + ref).then(r => r.json()).then(d => {
@@ -54,24 +54,20 @@
           document.getElementById('tx').innerHTML = '<strong>Order Reference:</strong> ' + o.reference + '<br><strong>Amount:</strong> GH₵' + Number(o.amount).toFixed(2) + '<br><strong>Email:</strong> ' + o.customerEmail;
           
           if (o.isDirectMomo || o.status === 'Awaiting MoMo Verification') {
-            // Direct MoMo order
             document.getElementById('successHeader').textContent = 'Order Submitted!';
             document.getElementById('successHeader').style.color = '#b7791f';
             document.getElementById('statusMsg').textContent = 'Direct MoMo transfer registered.';
             document.getElementById('momoHold').style.display = 'block';
             
-            // Set WhatsApp link for manual approval
-            const waMsg = encodeURIComponent(`Hello Nathaniel, I paid GH₵${o.amount.toFixed(2)} via Direct MoMo for my order. My Transaction Reference is: ${o.reference}. Please unlock my download.`);
+            const waMsg = encodeURIComponent(`Hello, I sent GH₵${o.amount.toFixed(2)} via Direct MoMo to Mary Appiah (0536473017). My Transaction ID is: ${o.reference}. Please verify and unlock my download.`);
             document.getElementById('waContact').href = 'https://wa.me/' + personalWhatsApp + '?text=' + waMsg;
           } else {
-            // Paystack automated order
             document.getElementById('statusMsg').textContent = 'Payment confirmed!';
             document.getElementById('dl').style.display = 'block';
             document.getElementById('dlList').innerHTML = o.downloads.map(x =>
               '<div style="margin-top:1rem;"><strong>' + x.name + '</strong><br><a href="' + x.downloadUrl + '" target="_blank" download class="dl-btn">📥 Download PDF Now</a></div>'
             ).join('');
             
-            // Set normal WhatsApp support link
             document.getElementById('waContact').href = 'https://wa.me/' + personalWhatsApp + '?text=' + encodeURIComponent('Hi, checking order: ' + o.reference);
           }
         }
