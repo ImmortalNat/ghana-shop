@@ -15,7 +15,13 @@ const SETTINGS_FILE = path.join(__dirname, 'settings.json');
 const VOUCHERS_FILE = path.join(__dirname, 'vouchers.json');
 const CATEGORIES_FILE = path.join(__dirname, 'categories.json');
 
-// Default initial categories
+// Protected Directories for Uploaded PDF Files
+const PREVIEWS_DIR = path.join(__dirname, '..', 'public', 'previews');
+const PROTECTED_BOOKS_DIR = path.join(__dirname, 'protected_books');
+
+if (!fs.existsSync(PREVIEWS_DIR)) fs.mkdirSync(PREVIEWS_DIR, { recursive: true });
+if (!fs.existsSync(PROTECTED_BOOKS_DIR)) fs.mkdirSync(PROTECTED_BOOKS_DIR, { recursive: true });
+
 const DEFAULT_CATEGORIES = [
   { id: 1, name: "Online Books", icon: "📚", isPaywallBook: true },
   { id: 2, name: "Results Checker", icon: "🎫", isPaywallBook: false },
@@ -24,7 +30,6 @@ const DEFAULT_CATEGORIES = [
   { id: 5, name: "Home Essentials", icon: "🏠", isPaywallBook: false }
 ];
 
-// Initial Catalog
 const DEFAULT_PRODUCTS = [
   {
     id: 1,
@@ -34,21 +39,9 @@ const DEFAULT_PRODUCTS = [
     pages: 145,
     category: "Online Books",
     image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400",
-    description: "Practical step-by-step roadmap to building and scaling a profitable business in Ghana.",
-    previewUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", // Free sample
-    downloadUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" // Full book (Protected)
-  },
-  {
-    id: 2,
-    name: "Personal Finance & T-Bill Investments (eBook)",
-    author: "E. Osei",
-    price: 45,
-    pages: 110,
-    category: "Online Books",
-    image: "https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=400",
-    description: "Learn how to budget, save, and invest in Treasury Bills and real estate in Ghana.",
+    description: "The complete step-by-step roadmap to building and scaling a profitable business in Ghana.",
     previewUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-    downloadUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+    hasProtectedFile: false
   },
   {
     id: 101,
@@ -56,15 +49,7 @@ const DEFAULT_PRODUCTS = [
     price: 22,
     category: "Results Checker",
     image: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400",
-    description: "Instant Serial Number and PIN to check WASSCE School & Nov/Dec results on the official WAEC portal."
-  },
-  {
-    id: 3,
-    name: "Wireless Noise-Cancelling Headphones",
-    price: 250,
-    category: "Electronics",
-    image: "https://picsum.photos/id/1/400/300",
-    description: "Premium wireless headphones with deep bass and microphone."
+    description: "Instant Serial Number and PIN to check WASSCE results on the official WAEC portal."
   }
 ];
 
@@ -81,8 +66,7 @@ const DEFAULT_SETTINGS = {
 
 const DEFAULT_VOUCHERS = [
   { id: 1, type: "WASSCE", serial: "WASS24019283", pin: "849201948271", used: false },
-  { id: 2, type: "BECE", serial: "BECE24091823", pin: "573829104829", used: false },
-  { id: 3, type: "CSSPS", serial: "CSSPS2400192", pin: "192837465019", used: false }
+  { id: 2, type: "BECE", serial: "BECE24091823", pin: "573829104829", used: false }
 ];
 
 function getJsonFile(file, defaultData) {
@@ -102,19 +86,15 @@ if (!fs.existsSync(VOUCHERS_FILE)) saveJsonFile(VOUCHERS_FILE, DEFAULT_VOUCHERS)
 if (!fs.existsSync(CATEGORIES_FILE)) saveJsonFile(CATEGORIES_FILE, DEFAULT_CATEGORIES);
 
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// 100MB body limit to support uploading complete PDF books directly
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/api/payment', paymentRoutes);
 
-// ==================== PUBLIC STORE APIS ====================
+// Public APIs
+app.get('/api/categories', (req, res) => res.json(getJsonFile(CATEGORIES_FILE, DEFAULT_CATEGORIES)));
 
-// 1. Categories API
-app.get('/api/categories', (req, res) => {
-  res.json(getJsonFile(CATEGORIES_FILE, DEFAULT_CATEGORIES));
-});
-
-// 2. Safe Products API (Hides full downloadUrl from public view)
 app.get('/api/products', (req, res) => {
   const products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
   res.json(products.map(p => ({
@@ -126,30 +106,51 @@ app.get('/api/products', (req, res) => {
     category: p.category,
     image: p.image,
     description: p.description,
-    previewUrl: p.previewUrl // Public sample preview
+    previewUrl: p.previewUrl
   })));
 });
 
-// 3. Book Preview API
 app.get('/api/products/:id/preview', (req, res) => {
   const products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
   const p = products.find(x => x.id === Number(req.params.id));
-  if (!p) return res.status(404).json({ error: 'Item not found' });
-  res.json({
-    id: p.id,
-    name: p.name,
-    author: p.author || 'N/A',
-    price: p.price,
-    pages: p.pages || '--',
-    category: p.category,
-    description: p.description,
-    previewUrl: p.previewUrl || "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
-  });
+  if (!p) return res.status(404).json({ error: 'Book not found' });
+  res.json(p);
 });
 
 app.get('/api/settings', (req, res) => res.json(getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS)));
 
-// ==================== ORDER VERIFICATION & UNLOCKING ====================
+// ==================== PROTECTED PDF FILE DOWNLOAD GATEKEEPER ====================
+app.get('/api/download/:ref/:id', (req, res) => {
+  const { ref, id } = req.params;
+  const orders = getJsonFile(ORDERS_FILE, []);
+  const products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
+
+  const order = orders.find(o => o.reference && o.reference.toLowerCase() === ref.toLowerCase());
+  if (!order) {
+    return res.status(403).send('Access Denied: Unverified Order Reference.');
+  }
+
+  const product = products.find(p => p.id === Number(id));
+  if (!product) {
+    return res.status(404).send('Book not found.');
+  }
+
+  // Look for stored PDF on server
+  const storedFilePath = path.join(PROTECTED_BOOKS_DIR, `book_${id}.pdf`);
+  if (fs.existsSync(storedFilePath)) {
+    const cleanFileName = `${product.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+    return res.download(storedFilePath, cleanFileName);
+  }
+
+  // Fallback to external URL if it was added as a link
+  if (product.downloadUrl) {
+    return res.redirect(product.downloadUrl);
+  }
+
+  res.status(404).send('Download file not found on server.');
+});
+
+// ORDER VERIFICATION & UNLOCKING
 app.get('/api/orders/:ref', async (req, res) => {
   const ref = (req.params.ref || '').trim();
   const orders = getJsonFile(ORDERS_FILE, []);
@@ -173,7 +174,6 @@ app.get('/api/orders/:ref', async (req, res) => {
         cartItems.forEach(item => {
           const matched = products.find(p => p.id === item.id || p.name === item.name);
           
-          // Allocate PINs for Results Checkers
           if (matched && matched.category === 'Results Checker') {
             const qty = item.qty || 1;
             for (let k = 0; k < qty; k++) {
@@ -207,9 +207,12 @@ app.get('/api/orders/:ref', async (req, res) => {
             }
           }
 
-          // Unlock Full PDF for paid Online Books
-          if (matched && matched.downloadUrl) {
-            downloads.push({ name: item.name, downloadUrl: matched.downloadUrl });
+          // Build secure download link for uploaded PDF eBooks
+          if (matched && (matched.hasProtectedFile || matched.downloadUrl || matched.category === 'Online Books')) {
+            downloads.push({
+              name: item.name,
+              downloadUrl: `/api/download/${tx.reference}/${matched.id}`
+            });
           }
         });
       }
@@ -239,7 +242,7 @@ app.get('/api/orders/:ref', async (req, res) => {
   res.status(404).json({ success: false, message: 'Order not found' });
 });
 
-// Admin Auth Middleware
+// Admin Auth
 function verifyAdmin(req, res, next) {
   const { password } = req.body;
   if (password !== (process.env.ADMIN_PASSWORD || 'admin123')) {
@@ -250,55 +253,89 @@ function verifyAdmin(req, res, next) {
 
 app.post('/api/admin/orders', verifyAdmin, (req, res) => res.json({ success: true, orders: getJsonFile(ORDERS_FILE, []).reverse() }));
 
-// ==================== DYNAMIC CATEGORIES CRUD ====================
-app.post('/api/admin/categories/save', verifyAdmin, (req, res) => {
-  const { category } = req.body;
-  let categories = getJsonFile(CATEGORIES_FILE, DEFAULT_CATEGORIES);
-
-  if (category.id) {
-    const idx = categories.findIndex(c => c.id === Number(category.id));
-    if (idx !== -1) {
-      categories[idx] = { ...categories[idx], ...category, id: Number(category.id) };
-    }
-  } else {
-    categories.push({
-      id: Date.now(),
-      name: category.name.trim(),
-      icon: category.icon || '🛍️',
-      isPaywallBook: Boolean(category.isPaywallBook)
-    });
-  }
-
-  saveJsonFile(CATEGORIES_FILE, categories);
-  res.json({ success: true, categories });
-});
-
-app.post('/api/admin/categories/delete', verifyAdmin, (req, res) => {
-  const { categoryId } = req.body;
-  let categories = getJsonFile(CATEGORIES_FILE, DEFAULT_CATEGORIES);
-  categories = categories.filter(c => c.id !== Number(categoryId));
-  saveJsonFile(CATEGORIES_FILE, categories);
-  res.json({ success: true, categories });
-});
-
-// Products CRUD
+// Save Product & Direct PDF File Uploads
 app.post('/api/admin/products/save', verifyAdmin, (req, res) => {
   let products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
   const p = req.body.product;
-  if (p.id) {
-    const i = products.findIndex(x => x.id === Number(p.id));
-    if (i !== -1) products[i] = { ...products[i], ...p, id: Number(p.id), price: Number(p.price) };
-  } else {
-    products.push({ ...p, id: Date.now(), price: Number(p.price) });
+  const prodId = p.id ? Number(p.id) : Date.now();
+
+  let previewUrl = p.previewUrl || '';
+  let hasProtectedFile = p.hasProtectedFile || false;
+
+  // 1. Process Uploaded Free Preview PDF File (Saved to public/previews)
+  if (p.previewPdfBase64 && p.previewPdfBase64.startsWith('data:application/pdf;base64,')) {
+    const base64Data = p.previewPdfBase64.replace(/^data:application\/pdf;base64,/, '');
+    const previewFileName = `preview_${prodId}.pdf`;
+    const previewFilePath = path.join(PREVIEWS_DIR, previewFileName);
+    fs.writeFileSync(previewFilePath, base64Data, 'base64');
+    previewUrl = `/previews/${previewFileName}`;
   }
+
+  // 2. Process Uploaded Full Protected Book PDF File (Saved securely in protected_books)
+  if (p.fullPdfBase64 && p.fullPdfBase64.startsWith('data:application/pdf;base64,')) {
+    const base64Data = p.fullPdfBase64.replace(/^data:application\/pdf;base64,/, '');
+    const bookFilePath = path.join(PROTECTED_BOOKS_DIR, `book_${prodId}.pdf`);
+    fs.writeFileSync(bookFilePath, base64Data, 'base64');
+    hasProtectedFile = true;
+  }
+
+  const updatedProduct = {
+    id: prodId,
+    name: p.name,
+    author: p.author || '',
+    price: Number(p.price),
+    category: p.category,
+    image: p.image,
+    description: p.description || '',
+    previewUrl: previewUrl,
+    hasProtectedFile: hasProtectedFile,
+    downloadUrl: p.downloadUrl || ''
+  };
+
+  if (p.id) {
+    const idx = products.findIndex(x => x.id === Number(p.id));
+    if (idx !== -1) products[idx] = { ...products[idx], ...updatedProduct };
+  } else {
+    products.push(updatedProduct);
+  }
+
   saveJsonFile(PRODUCTS_FILE, products);
   res.json({ success: true });
 });
 
 app.post('/api/admin/products/delete', verifyAdmin, (req, res) => {
-  let products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS).filter(p => p.id !== Number(req.body.productId));
+  const pId = Number(req.body.productId);
+  let products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS).filter(p => p.id !== pId);
   saveJsonFile(PRODUCTS_FILE, products);
+
+  // Clean up any files associated with this product
+  try {
+    const previewFile = path.join(PREVIEWS_DIR, `preview_${pId}.pdf`);
+    const fullFile = path.join(PROTECTED_BOOKS_DIR, `book_${pId}.pdf`);
+    if (fs.existsSync(previewFile)) fs.unlinkSync(previewFile);
+    if (fs.existsSync(fullFile)) fs.unlinkSync(fullFile);
+  } catch(e) {}
+
   res.json({ success: true });
+});
+
+app.post('/api/admin/categories/save', verifyAdmin, (req, res) => {
+  const { category } = req.body;
+  let categories = getJsonFile(CATEGORIES_FILE, DEFAULT_CATEGORIES);
+  if (category.id) {
+    const idx = categories.findIndex(c => c.id === Number(category.id));
+    if (idx !== -1) categories[idx] = { ...categories[idx], ...category, id: Number(category.id) };
+  } else {
+    categories.push({ id: Date.now(), name: category.name.trim(), icon: category.icon || '🛍️', isPaywallBook: Boolean(category.isPaywallBook) });
+  }
+  saveJsonFile(CATEGORIES_FILE, categories);
+  res.json({ success: true, categories });
+});
+
+app.post('/api/admin/categories/delete', verifyAdmin, (req, res) => {
+  let categories = getJsonFile(CATEGORIES_FILE, DEFAULT_CATEGORIES).filter(c => c.id !== Number(req.body.categoryId));
+  saveJsonFile(CATEGORIES_FILE, categories);
+  res.json({ success: true, categories });
 });
 
 app.post('/api/admin/settings/save', verifyAdmin, (req, res) => {
