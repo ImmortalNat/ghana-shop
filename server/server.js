@@ -56,7 +56,7 @@ const DEFAULT_PRODUCTS = [
 
 const DEFAULT_SETTINGS = {
   storeName: "Shop with ease",
-  announcement: "⚡ Welcome! Pay instantly via Paystack or Direct MoMo to 0536473017 🇬🇭",
+  announcement: "⚡ Welcome! Pay instantly via Paystack or Direct MoMo to Mary Appiah (0536473017) 🇬🇭",
   heroTitle: "Quality Products & Instant eBooks",
   heroSubtitle: "Read previews for free. Pay with Paystack or send Direct MoMo to get instant download access.",
   whatsappNumber: "233536473017",
@@ -379,7 +379,7 @@ app.get(['/track', '/track.html'], (req, res) => {
         
         let statusNote = o.deliveryNote || 'Your order has been confirmed.';
         if (o.status === 'Awaiting MoMo Verification') {
-          statusNote = '🔒 Awaiting Direct MoMo Verification. Please WhatsApp Nathaniel (0536473017) with your Transaction Reference screenshot to instantly unlock your book download!';
+          statusNote = '🔒 Awaiting Direct MoMo Verification. Please WhatsApp Mary Appiah (0536473017) with your Transaction Reference screenshot to instantly unlock your book download!';
         }
         document.getElementById('noteText').innerHTML = '<strong>Latest Update:</strong><br>' + statusNote;
         
@@ -400,7 +400,7 @@ app.get(['/track', '/track.html'], (req, res) => {
         document.getElementById('wa').href = 'https://wa.me/233536473017?text=' + encodeURIComponent('Hello, I am checking my order with code: ' + o.reference);
       } else {
         document.getElementById('stText').innerHTML = '<span style="color:red;">❌ Order not found. Check reference code.</span>';
-        document.getElementById('noteText').innerHTML = 'If you paid via Direct MoMo, please WhatsApp Nathaniel (0536473017) directly to activate your download.';
+        document.getElementById('noteText').innerHTML = 'If you paid via Direct MoMo, please WhatsApp Mary Appiah (0536473017) directly to activate your download.';
         document.getElementById('detailsText').innerHTML = '';
       }
     };
