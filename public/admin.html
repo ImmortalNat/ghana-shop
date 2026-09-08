@@ -1,141 +1,288 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin - Shop with ease</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Store & Reviews Manager</title>
   <link rel="stylesheet" href="/css/styles.css">
   <style>
-    .tab-bar{display:flex;gap:0.5rem;border-bottom:2px solid var(--gray-200);margin-bottom:1.5rem;}
-    .tab-btn{padding:0.8rem 1.2rem;background:none;border:none;font-weight:bold;color:var(--gray-500);cursor:pointer;}
-    .tab-btn.active{color:var(--primary);border-bottom:3px solid var(--primary);}
-    .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.2rem;}
-    .admin-card{background:#fff;padding:1.2rem;border-radius:8px;box-shadow:var(--shadow);}
-    .order-card{background:#fff;border-radius:10px;padding:1.2rem;margin-bottom:1rem;box-shadow:var(--shadow);border-left:5px solid var(--success);}
-    .momo-direct-highlight { border-left-color: #f59e0b !important; background: #fffdf9 !important; }
-    .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:1000;}
-    .modal-content{background:#fff;padding:2rem;border-radius:var(--radius);max-width:480px;width:90%;}
+    .tab-bar { display:flex; gap:0.5rem; border-bottom:2px solid #dee2e6; margin-bottom:1.5rem; flex-wrap:wrap; }
+    .tab-btn { padding:0.8rem 1.2rem; background:none; border:none; font-size:0.95rem; font-weight:bold; color:#6c757d; cursor:pointer; border-bottom:3px solid transparent; }
+    .tab-btn.active { color:#0a7e8c; border-color:#0a7e8c; }
+    .admin-card { background:#fff; padding:1.2rem; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.05); margin-bottom:1.2rem; }
+    .order-card { background:#fff; border-radius:10px; padding:1.5rem; margin-bottom:1.5rem; box-shadow:0 4px 15px rgba(0,0,0,0.06); border-left:6px solid #0a7e8c; }
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; }
+    .modal-content { background:#fff; padding:2rem; border-radius:10px; max-width:520px; width:90%; max-height:90vh; overflow-y:auto; }
   </style>
 </head>
 <body>
-  <nav class="navbar"><a href="/" class="navbar-brand">🛡️ Admin <span>Store Manager</span></a><ul class="navbar-links"><li><a href="/" target="_blank">View Store</a></li></ul></nav>
-  <div class="page-container">
-    <div id="loginBox" style="max-width:360px;margin:4rem auto;background:#fff;padding:2rem;border-radius:var(--radius);text-align:center;box-shadow:var(--shadow);">
+  <nav class="navbar"><a href="/" class="navbar-brand">🛡️ Admin <span>Manager</span></a><ul class="navbar-links"><li><a href="/" target="_blank">👁️ View Live Store</a></li></ul></nav>
+
+  <div class="page-container" style="max-width:950px; margin-top:2rem;">
+    <!-- Login -->
+    <div id="loginBox" style="max-width:380px; margin:4rem auto; background:#fff; padding:2rem; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.05); text-align:center;">
       <h3>🔐 Admin Login</h3>
-      <input type="password" id="adminPass" placeholder="Password" style="width:100%;padding:0.8rem;margin:1rem 0;border:1.5px solid var(--gray-300);border-radius:6px;">
-      <button class="btn" onclick="init()">Unlock Dashboard</button>
+      <input type="password" id="adminPass" placeholder="Password (admin123)" style="width:100%; padding:0.8rem; margin:1rem 0; border:1.5px solid #ddd; border-radius:6px;">
+      <button class="btn" onclick="initDashboard()" style="background:#0a7e8c;">Unlock Dashboard</button>
     </div>
-    
-    <div id="dash" style="display:none;">
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" style="display:none;">
       <div class="tab-bar">
-        <button class="tab-btn active" onclick="tab('orders',this)">📦 Customer Sales</button>
-        <button class="tab-btn" onclick="tab('books',this)">📚 Manage eBooks</button>
+        <button class="tab-btn active" onclick="switchTab('productsTab',this)">🛍️ Products & eBooks</button>
+        <button class="tab-btn" onclick="switchTab('reviewsTab',this)">⭐ Customer Reviews</button>
+        <button class="tab-btn" onclick="switchTab('ordersTab',this)">📦 Customer Sales</button>
+        <button class="tab-btn" onclick="switchTab('categoriesTab',this)">🏷️ Categories</button>
+        <button class="tab-btn" onclick="switchTab('storefrontTab',this)">🎨 Storefront</button>
       </div>
 
-      <!-- SALES TAB (Handles Direct MoMo Approvals) -->
-      <div id="ordersTab">
-        <div style="display:flex;justify-content:space-between;margin-bottom:1.5rem;align-items:center;">
-          <h3>Customer Sales & MoMo Verifications</h3>
-          <button class="btn" style="width:auto;padding:0.5rem 1rem;background:#6c757d;" onclick="loadOrders()">🔄 Refresh</button>
+      <!-- PRODUCTS TAB -->
+      <div id="productsTab">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:0.5rem;">
+          <h3>Product & eBook Catalog</h3>
+          <button class="btn" style="width:auto; background:#28a745; padding:0.6rem 1.2rem;" onclick="openProductModal()">➕ Upload New Item</button>
         </div>
-        <div id="ordersList">Loading...</div>
+        <div class="products-grid" id="productsList" style="padding:0;"></div>
       </div>
 
-      <!-- BOOKS TAB -->
-      <div id="booksTab" style="display:none;">
-        <div style="display:flex;justify-content:space-between;margin-bottom:1.5rem;align-items:center;">
-          <h3>eBook Catalog</h3>
-          <button class="btn" style="background:var(--success);" onclick="openModal()">➕ Add Book</button>
+      <!-- REVIEWS TAB -->
+      <div id="reviewsTab" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+          <h3>⭐ Moderate Customer Ratings & Reviews</h3>
+          <button class="btn" style="width:auto; padding:0.5rem 1rem; background:#6c757d;" onclick="loadAdminReviews()">🔄 Refresh</button>
         </div>
-        <div class="products-grid" id="bList" style="padding:0;"></div>
+        <div id="reviewsList">Loading reviews...</div>
+      </div>
+
+      <!-- ORDERS TAB -->
+      <div id="ordersTab" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+          <h3>Customer Sales & Deliveries</h3>
+          <button class="btn" style="width:auto; padding:0.5rem 1rem; background:#6c757d;" onclick="loadOrders()">🔄 Refresh</button>
+        </div>
+        <div id="ordersList">Loading orders...</div>
+      </div>
+
+      <!-- CATEGORIES TAB -->
+      <div id="categoriesTab" style="display:none;">
+        <div class="admin-card">
+          <h3>Active Categories</h3>
+          <div id="categoriesList">Loading...</div>
+        </div>
+      </div>
+
+      <!-- STOREFRONT TAB -->
+      <div id="storefrontTab" style="display:none;">
+        <form id="storefrontForm" onsubmit="saveStorefront(event)">
+          <div class="admin-card">
+            <h3>🏷️ Store Branding</h3>
+            <div class="form-group"><label>Store Name</label><input type="text" id="setStoreName" required></div>
+            <div class="form-group"><label>Announcement Bar</label><input type="text" id="setAnnouncement"></div>
+            <div class="form-group"><label>WhatsApp Support Number</label><input type="text" id="setWhatsapp" required></div>
+          </div>
+          <button type="submit" class="btn" style="background:#0a7e8c; padding:0.9rem;">💾 Save Settings</button>
+        </form>
       </div>
     </div>
   </div>
 
-  <!-- Book Modal -->
-  <div class="modal" id="m"><div class="modal-content">
-    <h3>Upload Book</h3>
-    <form onsubmit="save(event)">
-      <input type="hidden" id="bid"><input type="hidden" id="bimgB64">
-      <div class="form-group"><label>Book Title *</label><input type="text" id="bname" required></div>
-      <div class="form-group"><label>Author</label><input type="text" id="bauthor"></div>
-      <div class="form-group"><label>Price GH₵ *</label><input type="number" step="0.01" id="bprice" required></div>
-      <div class="form-group"><label>Preview PDF Link (Free sample pages) *</label><input type="url" id="bpreview" required></div>
-      <div class="form-group"><label>Full PDF Download Link (Protected - Paid) *</label><input type="url" id="bdownload" required></div>
-      <div class="form-group"><label>Cover Image (Direct File / Photo) *</label><input type="file" accept="image/*" onchange="handleImg(event)" style="width:100%; padding:0.5rem; border:1px dashed #0a7e8c; border-radius:6px;"><img id="bookPrev" src="" style="display:none; width:90px; height:120px; object-fit:cover; border-radius:6px; margin-top:0.5rem;"></div>
-      <div style="display:flex;gap:0.5rem;margin-top:1rem;"><button type="submit" class="btn" style="background:var(--success);">Save Book</button><button type="button" class="btn" style="background:#666;" onclick="closeModal()">Cancel</button></div>
-    </form>
-  </div></div>
+  <!-- Product Modal -->
+  <div class="modal" id="prodModal">
+    <div class="modal-content">
+      <h3 id="modalTitle">Upload Item / eBook</h3>
+      <form id="productForm" onsubmit="saveProduct(event)" style="margin-top:1rem;">
+        <input type="hidden" id="prodId"><input type="hidden" id="prodImageBase64"><input type="hidden" id="prodPreviewPdfBase64"><input type="hidden" id="prodFullPdfBase64">
+
+        <div class="form-group"><label>Title *</label><input type="text" id="prodName" required placeholder="e.g. Starting a Business in Ghana"></div>
+        <div class="form-group"><label>Author / Brand</label><input type="text" id="prodAuthor" placeholder="e.g. Kwame Mensah"></div>
+        <div class="form-group"><label>Price in GH₵ *</label><input type="number" step="0.01" id="prodPrice" required placeholder="e.g. 50"></div>
+        <div class="form-group"><label>Category *</label><select id="prodCategory" required style="width:100%; padding:0.7rem; border-radius:6px; border:1px solid #ddd;"></select></div>
+        
+        <div class="form-group">
+          <label>Cover Photo *</label>
+          <input type="file" id="prodFile" accept="image/*" onchange="handleImageUpload(event)" style="width:100%; padding:0.6rem; border:1.5px dashed #0a7e8c; border-radius:6px; background:#f8f9fa;">
+          <img id="imgPreview" src="" style="display:none; width:100px; height:120px; object-fit:cover; border-radius:6px; margin-top:0.5rem;">
+        </div>
+
+        <div class="form-group"><label>Description</label><textarea id="prodDesc" rows="3" style="width:100%; padding:0.7rem; border-radius:6px; border:1px solid #ddd;"></textarea></div>
+
+        <div style="display:flex; gap:0.5rem; margin-top:1.2rem;">
+          <button type="submit" class="btn" id="saveProdBtn" style="background:#28a745;">Save Item</button>
+          <button type="button" class="btn" style="background:#6c757d;" onclick="closeProductModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <script>
-    let P='';
-    function tab(t,b){document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('ordersTab').style.display=t==='orders'?'block':'none';document.getElementById('booksTab').style.display=t==='books'?'block':'none';if(t==='books')loadB();if(t==='orders')loadOrders();}
-    
-    async function init(){
-      P=document.getElementById('adminPass').value;
-      const r=await fetch('/api/admin/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:P})});
-      const d=await r.json();
-      if(!d.success)return alert('Wrong password');
-      document.getElementById('loginBox').style.display='none';
-      document.getElementById('dash').style.display='block';
-      loadOrders();
+    let savedPass = '';
+
+    function switchTab(id, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      ['productsTab','reviewsTab','ordersTab','categoriesTab','storefrontTab'].forEach(t => document.getElementById(t).style.display = t === id ? 'block' : 'none');
+      if (id === 'productsTab') loadProducts();
+      if (id === 'reviewsTab') loadAdminReviews();
+      if (id === 'ordersTab') loadOrders();
+      if (id === 'categoriesTab') loadCategories();
+      if (id === 'storefrontTab') loadSettings();
     }
 
-    async function loadOrders() {
-      const r=await fetch('/api/admin/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:P})});
-      const d=await r.json(); const box=document.getElementById('ordersList');
-      if(!d.orders.length) return box.innerHTML='<p style="color:#6c757d; padding:2rem; text-align:center;">No sales yet.</p>';
-      
-      box.innerHTML=d.orders.map(o=>`
-        <div class="order-card ${o.status === 'Awaiting MoMo Verification' ? 'momo-direct-highlight' : ''}">
-          <div style="display:flex;justify-content:space-between;">
-            <strong>Ref: ${o.reference}</strong>
-            <strong style="color:var(--success); font-size:1.15rem;">GH₵${Number(o.amount).toFixed(2)}</strong>
+    async function initDashboard() {
+      savedPass = document.getElementById('adminPass').value;
+      const r = await fetch('/api/admin/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:savedPass}) });
+      const d = await r.json();
+      if (!d.success) return alert(d.message || 'Wrong password');
+      document.getElementById('loginBox').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      loadCategories();
+      loadProducts();
+    }
+
+    // ================= REVIEWS MODERATION =================
+    async function loadAdminReviews() {
+      const res = await fetch('/api/admin/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: savedPass })
+      });
+      const data = await res.json();
+      const box = document.getElementById('reviewsList');
+      if (!data.reviews || !data.reviews.length) return box.innerHTML = '<p>No customer reviews yet.</p>';
+
+      box.innerHTML = data.reviews.map(r => `
+        <div class="admin-card" style="border-left: 5px solid #f59e0b;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong>${r.name} - ${'⭐'.repeat(r.rating)}</strong>
+            <span style="color:#6c757d; font-size:0.8rem;">${r.date}</span>
           </div>
-          <div style="background:#f8f9fa; padding:0.8rem; margin:0.8rem 0; border-radius:6px; font-size:0.9rem; line-height:1.6;">
-            👤 <b>Customer:</b> ${o.customerName} (${o.customerEmail})<br>
-            📞 <b>Phone / MoMo:</b> <a href="https://wa.me/233${(o.phone||'').replace(/^0/,'')}" target="_blank" style="color:#25D366; font-weight:bold;">💬 WhatsApp ${o.phone}</a><br>
-            📖 <b>Book(s):</b> ${o.items}<br>
-            ⚠️ <b>Payment Type:</b> ${o.isDirectMomo ? '<strong style="color:#b7791f;">DIRECT MOMO TRANSFER</strong>' : '<strong style="color:#0a7e8c;">AUTOMATED PAYSTACK</strong>'}
-          </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
-            <div>
-              <label><b>Set Status:</b></label>
-              <select class="status-select" style="padding:0.4rem; font-weight:bold;" onchange="updateSt('${o.reference}',this.value)">
-                <option value="Awaiting MoMo Verification" ${o.status==='Awaiting MoMo Verification'?'selected':''}>🟡 Awaiting MoMo Verification</option>
-                <option value="Delivered" ${o.status==='Delivered'?'selected':''}>🟢 Verified (Paid & Unlock Download)</option>
-              </select>
-            </div>
-            <span style="font-weight:bold; color:${o.status==='Delivered'?'var(--success)':'#b7791f'};">Current: ${o.status}</span>
-          </div>
+          <p style="color:#4a5568; margin:0.4rem 0 0.8rem;">"${r.comment}"</p>
+          <button class="btn" style="width:auto; padding:0.3rem 0.8rem; background:#dc3545; font-size:0.8rem;" onclick="deleteReview(${r.id})">🗑️ Delete Review</button>
         </div>
       `).join('');
     }
 
-    async function updateSt(ref,st) {
-      await fetch('/api/admin/update-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:P,reference:ref,status:st})});
-      loadOrders();
+    async function deleteReview(id) {
+      if (!confirm('Delete this review?')) return;
+      await fetch('/api/admin/reviews/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: savedPass, reviewId: id })
+      });
+      loadAdminReviews();
     }
 
-    async function loadB(){
-      const ps=await(await fetch('/api/products')).json();
-      document.getElementById('bList').innerHTML=ps.map(p=>'<div class="admin-card"><img src="'+p.image+'" style="width:100%;height:180px;object-fit:cover;border-radius:6px;"><h4>'+p.name+'</h4><strong style="color:var(--primary);">GH₵'+Number(p.price).toFixed(2)+'</strong><br><button class="btn" style="padding:0.4rem;background:var(--accent);margin-top:0.5rem;" onclick="del('+p.id+')">Delete</button></div>').join('');
+    // ================= IMAGE COMPRESSOR =================
+    function handleImageUpload(e) {
+      const f = e.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          let width = img.width, height = img.height;
+          const max_size = 600;
+          if (width > height) { if (width > max_size) { height *= max_size / width; width = max_size; } }
+          else { if (height > max_size) { width *= max_size / height; height = max_size; } }
+          canvas.width = width; canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          const b64 = canvas.toDataURL('image/jpeg', 0.85);
+          document.getElementById('prodImageBase64').value = b64;
+          const preview = document.getElementById('imgPreview');
+          preview.src = b64; preview.style.display = 'block';
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(f);
     }
 
-    function openModal(){document.getElementById('bid').value='';document.getElementById('bname').value='';document.getElementById('bprice').value='';document.getElementById('bpreview').value='';document.getElementById('bdownload').value='';document.getElementById('bookPrev').style.display='none';document.getElementById('m').style.display='flex';}
-    function closeModal(){document.getElementById('m').style.display='none';}
-
-    function compressImg(file, cb) {
-      const r = new FileReader();
-      r.onload = e => { const i = new Image(); i.onload = () => { const c = document.createElement('canvas'); let w=i.width, h=i.height; if(w>h){if(w>600){h*=600/w;w=600;}}else{if(h>600){w*=600/h;h=600;}} c.width=w;c.height=h;c.getContext('2d').drawImage(i,0,0,w,h);cb(c.toDataURL('image/jpeg',0.8)); }; i.src=e.target.result; }; r.readAsDataURL(file);
+    // ================= CATEGORIES & PRODUCTS =================
+    async function loadCategories() {
+      const res = await fetch('/api/categories');
+      const cats = await res.json();
+      document.getElementById('prodCategory').innerHTML = cats.map(c => `<option value="${c.name}">${c.icon} ${c.name}</option>`).join('');
+      document.getElementById('categoriesList').innerHTML = cats.map(c => `<span style="background:#f1f8f9; padding:4px 8px; border-radius:4px; margin:2px; display:inline-block;">${c.icon} ${c.name}</span>`).join(' ');
     }
-    function handleImg(e) { const f=e.target.files[0]; if(!f)return; compressImg(f,b=>{document.getElementById('bookImgB64').value=b;const p=document.getElementById('bookPrev');p.src=b;p.style.display='block';}); }
 
-    async function save(e){
-      e.preventDefault(); const img=document.getElementById('bookImgB64').value; if(!img) return alert('Select book cover photo');
-      await fetch('/api/admin/products/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:P,product:{id:document.getElementById('bid').value,name:document.getElementById('bname').value,author:document.getElementById('bauthor').value,price:document.getElementById('bprice').value,previewUrl:document.getElementById('bpreview').value,downloadUrl:document.getElementById('bdownload').value,image:img}})});
-      closeModal(); loadB();
+    async function loadProducts() {
+      const ps = await (await fetch('/api/products')).json();
+      document.getElementById('productsList').innerHTML = ps.map(p => `
+        <div class="admin-card">
+          <img src="${p.image}" style="width:100%; height:160px; object-fit:cover; border-radius:6px;">
+          <h4 style="margin:0.5rem 0 0.2rem;">${p.name}</h4>
+          <span style="color:#0a7e8c; font-weight:bold;">GH₵${Number(p.price).toFixed(2)}</span>
+          <button class="btn" style="padding:0.4rem; background:#dc3545; margin-top:0.5rem;" onclick="delProd(${p.id})">Delete</button>
+        </div>
+      `).join('');
     }
-    async function del(id){if(!confirm('Delete?'))return;await fetch('/api/admin/products/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:P,productId:id})});loadB();}
+
+    function openProductModal() { ['prodId','prodName','prodAuthor','prodPrice','prodDesc','prodImageBase64'].forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ''; }); document.getElementById('imgPreview').style.display = 'none'; document.getElementById('prodModal').style.display = 'flex'; }
+    function closeProductModal() { document.getElementById('prodModal').style.display = 'none'; }
+
+    async function saveProduct(e) {
+      e.preventDefault();
+      const image = document.getElementById('prodImageBase64').value;
+      if (!image) return alert('Select a cover photo');
+      const btn = document.getElementById('saveProdBtn');
+      btn.disabled = true; btn.textContent = 'Saving...';
+
+      await fetch('/api/admin/products/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          password: savedPass,
+          product: {
+            id: document.getElementById('prodId').value,
+            name: document.getElementById('prodName').value,
+            author: document.getElementById('prodAuthor').value,
+            price: document.getElementById('prodPrice').value,
+            category: document.getElementById('prodCategory').value,
+            image: image,
+            description: document.getElementById('prodDesc').value
+          }
+        })
+      });
+      btn.disabled = false; btn.textContent = 'Save Item';
+      closeProductModal(); loadProducts();
+    }
+
+    async function delProd(id) { if (!confirm('Delete?')) return; await fetch('/api/admin/products/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:savedPass, productId:id}) }); loadProducts(); }
+
+    async function loadOrders() {
+      const d = await (await fetch('/api/admin/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:savedPass}) })).json();
+      document.getElementById('ordersList').innerHTML = d.orders.length ? d.orders.map(o => `
+        <div class="order-card">
+          <div style="display:flex; justify-content:space-between;">
+            <strong>Ref: ${o.reference}</strong>
+            <strong style="color:#0a7e8c;">GH₵${Number(o.amount).toFixed(2)}</strong>
+          </div>
+          <p style="font-size:0.9rem; margin-top:0.5rem;">👤 ${o.customerName} (${o.customerEmail})<br>📖 ${o.items}</p>
+        </div>
+      `).join('') : '<p>No sales yet.</p>';
+    }
+
+    async function loadSettings() {
+      const s = await (await fetch('/api/settings')).json();
+      document.getElementById('setStoreName').value = s.storeName || '';
+      document.getElementById('setAnnouncement').value = s.announcement || '';
+      document.getElementById('setWhatsapp').value = s.whatsappNumber || '';
+    }
+
+    async function saveStorefront(e) {
+      e.preventDefault();
+      await fetch('/api/admin/settings/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: savedPass, settings: {
+          storeName: document.getElementById('setStoreName').value,
+          announcement: document.getElementById('setAnnouncement').value,
+          whatsappNumber: document.getElementById('setWhatsapp').value
+        }})
+      });
+      alert('Settings saved!');
+    }
   </script>
 </body>
 </html>
