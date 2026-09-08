@@ -1,75 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Payment Successful - Download Your PDF</title>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Successful - Shop with ease</title>
   <link rel="stylesheet" href="/css/styles.css">
   <style>
-    .download-card { background: #eef7f8; border: 2px solid #0a7e8c; border-radius: 10px; padding: 1.5rem; margin: 1.5rem 0; text-align: center; }
-    .download-btn { display: inline-flex; align-items: center; gap: 0.5rem; background: #28a745; color: white; font-size: 1.15rem; font-weight: bold; padding: 1rem 2rem; border-radius: 8px; text-decoration: none; margin-top: 0.8rem; box-shadow: 0 4px 12px rgba(40,167,69,0.3); }
-    .download-btn:hover { background: #218838; }
+    .dl-box{background:#f0fff4;border:2px solid var(--success);padding:2rem;border-radius:var(--radius);margin:2rem 0;text-align:center;}
+    .dl-btn{display:inline-block;background:var(--success);color:#fff;font-size:1.15rem;font-weight:bold;padding:1rem 2rem;border-radius:8px;text-decoration:none;margin-top:1rem;}
+    .momo-hold-box { background: #fffdf0; border: 2px dashed #f59e0b; padding: 2rem; border-radius: var(--radius); margin: 2rem 0; text-align: left; }
   </style>
 </head>
 <body>
   <nav class="navbar"><a href="/" class="navbar-brand">🛍️ Shop with <span>ease</span></a></nav>
-  <div class="page-container" style="max-width: 600px; text-align: center; margin-top: 3rem;">
-    <div style="background: #fff; padding: 2.5rem 2rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-      <h1 style="font-size: 3rem; margin: 0;">🎉</h1>
-      <h2 style="color: #28a745; margin: 0.5rem 0;">Payment Confirmed!</h2>
-      <p id="statusMsg" style="color: #6c757d;">Unlocking your digital downloads...</p>
+  <div class="page-container" style="max-width:600px;text-align:center;margin-top:3rem;">
+    <div style="background:#fff;padding:2.5rem;border-radius:var(--radius);box-shadow:var(--shadow);">
+      <h1 style="font-size:3.5rem;">🎉</h1>
+      <h2 style="color:var(--success);" id="successHeader">Payment Confirmed!</h2>
+      <p id="statusMsg">Verifying payment with Paystack...</p>
 
-      <!-- DIRECT PDF EBOOK DOWNLOAD BOX -->
-      <div id="downloadContainer" style="display: none;">
-        <div class="download-card">
-          <h3 style="color: #0a7e8c; margin-bottom: 0.3rem;">📖 Your PDF eBook is Unlocked!</h3>
-          <p style="color: #495057; font-size: 0.95rem;">Click below to download the complete PDF file to your phone/computer:</p>
-          <div id="downloadButtonsList"></div>
-        </div>
+      <!-- INSTANT DOWNLOAD AREA (Unlocked for instant card/paystack momo) -->
+      <div id="dl" style="display:none;" class="dl-box">
+        <h3>🔓 Full eBook Unlocked!</h3>
+        <div id="dlList"></div>
       </div>
 
-      <!-- Receipt Box -->
-      <div id="txInfo" style="margin: 1.5rem 0; text-align: left; background: #f8f9fa; padding: 1.2rem; border-radius: 8px; font-size: 0.9rem; line-height: 1.6; border: 1px solid #e9ecef; display: none;"></div>
+      <!-- DIRECT MOMO APPROVAL MESSAGE -->
+      <div id="momoHold" style="display:none;" class="momo-hold-box">
+        <h3 style="color:#b7791f; margin-bottom:0.5rem;">🔒 Awaiting MoMo Verification</h3>
+        <p style="color:#4a5568; font-size:0.95rem; line-height:1.6;">
+          Your direct MoMo submission has been logged! To instantly unlock your PDF book download, please tap the WhatsApp button below to send Nathaniel your <strong>Transaction ID / Reference</strong>.
+        </p>
+      </div>
 
-      <a id="waContact" href="#" target="_blank" class="btn" style="background:#25D366; display:block; text-align:center; text-decoration:none; margin-top:1rem; padding: 0.8rem;">
-        💬 Have Questions? WhatsApp Support
+      <div id="tx" style="text-align:left;background:#f8f9fa;padding:1.2rem;border-radius:8px;font-size:0.9rem;margin-top:1rem;border:1px solid #ddd;"></div>
+      
+      <a id="waContact" href="#" target="_blank" class="btn" style="background:#25D366; display:block; text-align:center; text-decoration:none; margin-top:1.5rem; padding: 0.8rem;">
+        💬 Chat with Nathaniel on WhatsApp
       </a>
-
-      <a href="/" class="btn" style="display:block; margin-top:0.8rem; background:#6c757d; text-decoration:none; padding:0.75rem;">
-        Back to Store
-      </a>
+      
+      <a href="/" class="btn" style="display:block;margin-top:1rem;background:#6c757d;">Browse More Books</a>
     </div>
   </div>
-
   <script>
-    const ref = new URLSearchParams(window.location.search).get('reference') || new URLSearchParams(window.location.search).get('trxref');
+    const ref = new URLSearchParams(window.location.search).get('reference');
+    const personalWhatsApp = "233536473017"; // Your WhatsApp number
+
     if (ref) {
-      fetch('/api/orders/' + ref).then(r => r.json()).then(data => {
-        if (data.success) {
+      fetch('/api/orders/' + ref).then(r => r.json()).then(d => {
+        if (d.success) {
           localStorage.removeItem('shopwave_cart');
-          const o = data.order;
-          document.getElementById('statusMsg').textContent = 'Thank you! Full access has been granted.';
-
-          // Render Direct PDF Downloads
-          if (o.downloads && o.downloads.length > 0) {
-            document.getElementById('downloadContainer').style.display = 'block';
-            document.getElementById('downloadButtonsList').innerHTML = o.downloads.map(d =>
-              `<div style="margin-top: 1rem;">
-                <strong style="display:block; font-size:1.05rem; color:#1a1a2e; margin-bottom:0.4rem;">${d.name}</strong>
-                <a href="${d.downloadUrl}" class="download-btn">📥 Download Complete PDF</a>
-              </div>`
+          const o = d.order;
+          
+          document.getElementById('tx').innerHTML = '<strong>Order Reference:</strong> ' + o.reference + '<br><strong>Amount:</strong> GH₵' + Number(o.amount).toFixed(2) + '<br><strong>Email:</strong> ' + o.customerEmail;
+          
+          if (o.isDirectMomo || o.status === 'Awaiting MoMo Verification') {
+            // Direct MoMo order
+            document.getElementById('successHeader').textContent = 'Order Submitted!';
+            document.getElementById('successHeader').style.color = '#b7791f';
+            document.getElementById('statusMsg').textContent = 'Direct MoMo transfer registered.';
+            document.getElementById('momoHold').style.display = 'block';
+            
+            // Set WhatsApp link for manual approval
+            const waMsg = encodeURIComponent(`Hello Nathaniel, I paid GH₵${o.amount.toFixed(2)} via Direct MoMo for my order. My Transaction Reference is: ${o.reference}. Please unlock my download.`);
+            document.getElementById('waContact').href = 'https://wa.me/' + personalWhatsApp + '?text=' + waMsg;
+          } else {
+            // Paystack automated order
+            document.getElementById('statusMsg').textContent = 'Payment confirmed!';
+            document.getElementById('dl').style.display = 'block';
+            document.getElementById('dlList').innerHTML = o.downloads.map(x =>
+              '<div style="margin-top:1rem;"><strong>' + x.name + '</strong><br><a href="' + x.downloadUrl + '" target="_blank" download class="dl-btn">📥 Download PDF Now</a></div>'
             ).join('');
+            
+            // Set normal WhatsApp support link
+            document.getElementById('waContact').href = 'https://wa.me/' + personalWhatsApp + '?text=' + encodeURIComponent('Hi, checking order: ' + o.reference);
           }
-
-          document.getElementById('txInfo').style.display = 'block';
-          document.getElementById('txInfo').innerHTML = `
-            <strong>Order Reference:</strong> ${o.reference}<br>
-            <strong>Amount:</strong> GH₵${Number(o.amount).toFixed(2)}<br>
-            <strong>Customer:</strong> ${o.customerEmail}<br>
-            <strong>Items:</strong> ${o.items}
-          `;
-
-          document.getElementById('waContact').href = `https://wa.me/233536473017?text=${encodeURIComponent('Hello, I bought: ' + o.reference)}`;
         }
       });
     }
