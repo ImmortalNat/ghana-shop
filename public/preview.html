@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Book Preview & Paywall - Shop with ease</title>
+  <title>Book Preview & Reviews - Shop with ease</title>
   <link rel="stylesheet" href="/css/styles.css">
   <style>
     .preview-box { position: relative; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.12); height: 75vh; }
@@ -11,6 +11,10 @@
     .paywall { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to bottom, transparent 0%, rgba(26,54,93,0.98) 40%); padding: 3rem 2rem; text-align: center; color: #fff; }
     .unlock-btn { background: #ff6b35; color: #fff; font-size: 1.15rem; font-weight: bold; padding: 1rem 2.2rem; border: none; border-radius: 8px; cursor: pointer; margin-top: 1rem; box-shadow: 0 4px 15px rgba(255,107,53,0.4); transition: 0.2s; }
     .unlock-btn:hover { background: #e55a2b; transform: scale(1.03); }
+    .reviews-section { background: #fff; border-radius: 12px; padding: 2rem; margin-top: 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+    .review-item { border-bottom: 1px solid #e9ecef; padding: 1rem 0; }
+    .review-item:last-child { border-bottom: none; }
+    .stars { color: #f59e0b; font-size: 1.1rem; }
   </style>
 </head>
 <body>
@@ -45,6 +49,44 @@
         </button>
       </div>
     </div>
+
+    <!-- ⭐ CUSTOMER REVIEWS & RATINGS SECTION -->
+    <div class="reviews-section">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:0.5rem;">
+        <div>
+          <h3 style="margin:0; color:#1a1a2e;">💬 Customer Ratings & Reviews</h3>
+          <span style="color:#6c757d; font-size:0.85rem;">Verified Reader Feedback</span>
+        </div>
+        <button class="btn" style="width:auto; background:#0a7e8c; padding:0.5rem 1rem;" onclick="toggleReviewForm()">✍️ Write a Review</button>
+      </div>
+
+      <!-- Add Review Form (Hidden by default) -->
+      <form id="reviewForm" onsubmit="submitReview(event)" style="display:none; background:#f8f9fa; padding:1.2rem; border-radius:8px; border:1px solid #dee2e6; margin-bottom:1.5rem;">
+        <h4 style="margin-top:0;">Rate & Review this Book</h4>
+        <div class="form-group">
+          <label>Your Name *</label>
+          <input type="text" id="revName" required placeholder="e.g. Kwabena Mensah">
+        </div>
+        <div class="form-group">
+          <label>Your Rating *</label>
+          <select id="revRating" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid #ddd; font-weight:bold;">
+            <option value="5">⭐⭐⭐⭐⭐ 5 Stars (Excellent)</option>
+            <option value="4">⭐⭐⭐⭐ 4 Stars (Very Good)</option>
+            <option value="3">⭐⭐⭐ 3 Stars (Good)</option>
+            <option value="2">⭐⭐ 2 Stars (Fair)</option>
+            <option value="1">⭐ 1 Star (Poor)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Your Comment / Experience *</label>
+          <textarea id="revComment" rows="3" required placeholder="Share your experience with this book..."></textarea>
+        </div>
+        <button type="submit" class="btn" style="background:#28a745; width:auto; padding:0.6rem 1.5rem;">Submit Review</button>
+      </form>
+
+      <!-- Reviews Feed -->
+      <div id="reviewsContainer">Loading reviews...</div>
+    </div>
   </div>
 
   <script>
@@ -54,15 +96,66 @@
     function getCart() { return JSON.parse(localStorage.getItem('shopwave_cart') || '[]'); }
     function saveCart(c) { localStorage.setItem('shopwave_cart', JSON.stringify(c)); }
 
-    fetch('/api/products/' + id + '/preview')
-      .then(r => r.json())
-      .then(d => {
-        book = d;
-        document.getElementById('pTitle').textContent = d.name;
-        document.getElementById('pAuthor').textContent = 'By ' + d.author + ' • ' + d.pages + ' pages';
-        document.getElementById('pPrice').textContent = 'GH₵ ' + Number(d.price).toFixed(2);
-        document.getElementById('pFrame').src = d.previewUrl;
+    async function loadPreview() {
+      try {
+        const res = await fetch('/api/products/' + id + '/preview');
+        book = await res.json();
+        document.getElementById('pTitle').textContent = book.name;
+        document.getElementById('pAuthor').textContent = 'By ' + (book.author || 'Author') + ' • ' + (book.pages || '--') + ' pages';
+        document.getElementById('pPrice').textContent = 'GH₵ ' + Number(book.price).toFixed(2);
+        document.getElementById('pFrame').src = book.previewUrl;
+      } catch(e) {}
+    }
+
+    async function loadReviews() {
+      try {
+        const res = await fetch('/api/reviews/' + id);
+        const reviews = await res.json();
+        const box = document.getElementById('reviewsContainer');
+
+        if (!reviews.length) {
+          box.innerHTML = '<p style="color:#6c757d; font-size:0.9rem;">No reviews yet. Be the first to leave a rating!</p>';
+          return;
+        }
+
+        box.innerHTML = reviews.map(r => `
+          <div class="review-item">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
+              <strong style="color:#1a1a2e;">${r.name} <span style="color:#28a745; font-size:0.75rem; font-weight:bold; background:#d1fae5; padding:2px 6px; border-radius:10px;">✓ Verified Reader</span></strong>
+              <span style="color:#6c757d; font-size:0.8rem;">${r.date}</span>
+            </div>
+            <div class="stars">${'⭐'.repeat(r.rating)}</div>
+            <p style="color:#4a5568; font-size:0.9rem; margin-top:0.3rem;">"${r.comment}"</p>
+          </div>
+        `).join('');
+      } catch(e) {}
+    }
+
+    function toggleReviewForm() {
+      const f = document.getElementById('reviewForm');
+      f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    }
+
+    async function submitReview(e) {
+      e.preventDefault();
+      const name = document.getElementById('revName').value.trim();
+      const rating = document.getElementById('revRating').value;
+      const comment = document.getElementById('revComment').value.trim();
+
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: id, name, rating, comment })
       });
+      const data = await res.json();
+      if (data.success) {
+        alert('Thank you! Your review has been posted. ⭐');
+        document.getElementById('revName').value = '';
+        document.getElementById('revComment').value = '';
+        toggleReviewForm();
+        loadReviews();
+      }
+    }
 
     function buyBook() {
       if (!book) return;
@@ -73,6 +166,9 @@
       saveCart(c);
       window.location.href = '/checkout';
     }
+
+    loadPreview();
+    loadReviews();
   </script>
 </body>
 </html>
