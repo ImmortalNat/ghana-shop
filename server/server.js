@@ -313,6 +313,17 @@ app.post('/api/admin/settings/save', verifyAdmin, (req, res) => {
   res.json({ success: true });
 });
 
+// 🤖 SEO & BOT ROUTES
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain');
+  res.sendFile(path.join(__dirname, '..', 'public', 'robots.txt'));
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  res.type('application/xml');
+  res.sendFile(path.join(__dirname, '..', 'public', 'sitemap.xml'));
+});
+
 // Page routes
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
 app.get('/preview/:id', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'preview.html')));
