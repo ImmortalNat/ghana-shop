@@ -1,4 +1,5 @@
 let products = [];
+let categories = [];
 
 function getCart() { return JSON.parse(localStorage.getItem('shopwave_cart') || '[]'); }
 function saveCart(c) { localStorage.setItem('shopwave_cart', JSON.stringify(c)); updateBadge(); }
@@ -15,18 +16,40 @@ function toast(msg) {
   setTimeout(() => t.style.display = 'none', 2000);
 }
 
+// Render dynamic category filter tabs on homepage
+function renderCategoryButtons() {
+  const filterContainer = document.getElementById('categoryFiltersContainer');
+  if (!filterContainer) return;
+
+  filterContainer.innerHTML = `
+    <button class="filter-btn active" onclick="filterCat('all', this)">All Items</button>
+    ${categories.map(c => `
+      <button class="filter-btn" onclick="filterCat('${c.name}', this)">
+        ${c.icon} ${c.name}
+      </button>
+    `).join('')}
+  `;
+}
+
+// Render Products Grid
 function render(list) {
   const grid = document.getElementById('productsGrid');
   if (!grid) return;
 
+  if (list.length === 0) {
+    grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; padding:3rem; color:#6c757d;">No items found in this category.</p>';
+    return;
+  }
+
   grid.innerHTML = list.map(p => {
-    const isBook = p.category === 'Online Books' || p.previewUrl;
+    const matchedCat = categories.find(c => c.name === p.category);
+    const isPaywallBook = (matchedCat && matchedCat.isPaywallBook) || p.previewUrl || p.category === 'Online Books';
 
     return `
       <div class="product-card">
         <div style="position: relative;">
           <img src="${p.image}" alt="${p.name}" loading="lazy">
-          ${isBook ? '<span style="position:absolute; top:10px; right:10px; background:#ff6b35; color:#fff; font-size:0.75rem; font-weight:bold; padding:0.25rem 0.6rem; border-radius:4px;">👁️ Sample Available</span>' : ''}
+          ${isPaywallBook ? '<span style="position:absolute; top:10px; right:10px; background:#ff6b35; color:#fff; font-size:0.75rem; font-weight:bold; padding:0.25rem 0.6rem; border-radius:4px;">👁️ Sample Available</span>' : ''}
         </div>
         <div class="product-info">
           <span class="product-category">${p.category || 'General'}</span>
@@ -35,10 +58,10 @@ function render(list) {
           <p style="color:#666; font-size:0.85rem; margin-bottom:0.8rem; flex:1;">${p.description || ''}</p>
           <div class="product-price">GH₵${Number(p.price).toFixed(2)}</div>
 
-          ${isBook ? `
+          ${isPaywallBook ? `
             <div style="display:flex; gap:0.5rem; margin-top:auto;">
-              <a href="/preview/${p.id}" class="btn" style="flex:1; text-align:center; background:#0a7e8c; text-decoration:none; padding:0.6rem;">👁️ Preview</a>
-              <button class="btn" style="flex:1.2; background:#ff6b35; padding:0.6rem;" onclick="addToCart(${p.id})">🔓 Buy Full</button>
+              <a href="/preview/${p.id}" class="btn" style="flex:1; text-align:center; background:#0a7e8c; text-decoration:none; padding:0.6rem;">👁️ Free Preview</a>
+              <button class="btn" style="flex:1.2; background:#ff6b35; padding:0.6rem;" onclick="addToCart(${p.id})">🔓 Buy Full Book</button>
             </div>
           ` : `
             <button class="btn" onclick="addToCart(${p.id})">Add to Cart 🛒</button>
@@ -60,16 +83,22 @@ function addToCart(id) {
   toast('Added ' + p.name + ' to cart!');
 }
 
-function filterCat(cat, btn) {
+function filterCat(catName, btn) {
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  render(cat === 'all' ? products : products.filter(p => p.category === cat));
+  render(catName === 'all' ? products : products.filter(p => p.category === catName));
 }
 
 async function loadStore() {
   try {
-    const [prodRes, setRes] = await Promise.all([fetch('/api/products'), fetch('/api/settings')]);
+    const [prodRes, setRes, catRes] = await Promise.all([
+      fetch('/api/products'),
+      fetch('/api/settings'),
+      fetch('/api/categories')
+    ]);
+
     products = await prodRes.json();
+    categories = await catRes.json();
     const s = await setRes.json();
 
     if (s.announcement && document.getElementById('announcementBar')) {
@@ -82,6 +111,7 @@ async function loadStore() {
     if (s.heroTitle && document.getElementById('heroTitle')) document.getElementById('heroTitle').textContent = s.heroTitle;
     if (s.heroSubtitle && document.getElementById('heroSubtitle')) document.getElementById('heroSubtitle').textContent = s.heroSubtitle;
 
+    renderCategoryButtons();
     render(products);
   } catch (err) {
     console.error('Error loading store:', err);
