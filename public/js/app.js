@@ -16,7 +16,6 @@ function toast(msg) {
   setTimeout(() => t.style.display = 'none', 2000);
 }
 
-// Render dynamic category filter tabs on homepage
 function renderCategoryButtons() {
   const filterContainer = document.getElementById('categoryFiltersContainer');
   if (!filterContainer) return;
@@ -31,7 +30,6 @@ function renderCategoryButtons() {
   `;
 }
 
-// Render Products Grid
 function render(list) {
   const grid = document.getElementById('productsGrid');
   if (!grid) return;
@@ -54,7 +52,15 @@ function render(list) {
         <div class="product-info">
           <span class="product-category">${p.category || 'General'}</span>
           <h3 class="product-name">${p.name}</h3>
-          ${p.author ? `<span style="color:#6c757d; font-size:0.85rem; display:block; margin-bottom:0.3rem;">By ${p.author}</span>` : ''}
+          ${p.author ? `<span style="color:#6c757d; font-size:0.85rem; display:block; margin-bottom:0.2rem;">By ${p.author}</span>` : ''}
+
+          <!-- ⭐ Rating Display -->
+          <div style="color:#f59e0b; font-size:0.85rem; font-weight:bold; margin-bottom:0.4rem; display:flex; align-items:center; gap:0.3rem;">
+            <span>⭐⭐⭐⭐⭐</span>
+            <span style="color:#1a1a2e;">${p.rating || '5.0'}</span>
+            <span style="color:#6c757d; font-weight:normal;">(${p.reviewsCount || 1} verified)</span>
+          </div>
+
           <p style="color:#666; font-size:0.85rem; margin-bottom:0.8rem; flex:1;">${p.description || ''}</p>
           <div class="product-price">GH₵${Number(p.price).toFixed(2)}</div>
 
