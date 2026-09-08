@@ -9,8 +9,6 @@
     .download-card { background: #eef7f8; border: 2px solid #0a7e8c; border-radius: 10px; padding: 1.5rem; margin: 1.5rem 0; text-align: center; }
     .download-btn { display: inline-flex; align-items: center; gap: 0.5rem; background: #28a745; color: white; font-size: 1.15rem; font-weight: bold; padding: 1rem 2rem; border-radius: 8px; text-decoration: none; margin-top: 0.8rem; box-shadow: 0 4px 12px rgba(40,167,69,0.3); }
     .download-btn:hover { background: #218838; }
-    .checker-card { background: #f0fff4; border: 2px solid #28a745; border-radius: 10px; padding: 1.5rem; margin: 1.5rem 0; text-align: left; }
-    .pin-display { background: #1a1a2e; color: #f59e0b; font-family: monospace; font-size: 1.25rem; font-weight: bold; padding: 0.8rem 1rem; border-radius: 6px; letter-spacing: 2px; margin: 0.4rem 0 0.8rem; }
   </style>
 </head>
 <body>
@@ -29,9 +27,6 @@
           <div id="downloadButtonsList"></div>
         </div>
       </div>
-
-      <!-- RESULTS CHECKER PIN DISPLAY -->
-      <div id="checkersContainer" style="display: none;"></div>
 
       <!-- Receipt Box -->
       <div id="txInfo" style="margin: 1.5rem 0; text-align: left; background: #f8f9fa; padding: 1.2rem; border-radius: 8px; font-size: 0.9rem; line-height: 1.6; border: 1px solid #e9ecef; display: none;"></div>
@@ -64,22 +59,6 @@
                 <a href="${d.downloadUrl}" class="download-btn">📥 Download Complete PDF</a>
               </div>`
             ).join('');
-          }
-
-          // Render Results Checkers if bought
-          if (o.checkers && o.checkers.length > 0) {
-            const cBox = document.getElementById('checkersContainer');
-            cBox.style.display = 'block';
-            cBox.innerHTML = o.checkers.map(c => `
-              <div class="checker-card">
-                <h3 style="color:#28a745; margin:0 0 0.5rem;">🎫 ${c.itemName}</h3>
-                <label style="font-size:0.85rem; font-weight:bold;">Serial Number:</label>
-                <div class="pin-display">${c.serial}</div>
-                <label style="font-size:0.85rem; font-weight:bold;">PIN Code:</label>
-                <div class="pin-display">${c.pin}</div>
-                <a href="${c.portalUrl}" target="_blank" class="btn" style="display:block; text-align:center; background:#28a745; margin-top:0.8rem;">Open Portal →</a>
-              </div>
-            `).join('');
           }
 
           document.getElementById('txInfo').style.display = 'block';
