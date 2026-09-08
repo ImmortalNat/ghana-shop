@@ -2,39 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Checkout - ShopWave</title>
+  <title>Checkout - Shop with ease</title>
   <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .payment-tab-bar { display: flex; gap: 0.5rem; border-bottom: 2px solid var(--gray-200); margin-bottom: 1.5rem; }
+    .pay-tab-btn { flex: 1; padding: 0.8rem; background: var(--gray-100); border: none; font-size: 0.95rem; font-weight: bold; color: var(--gray-700); cursor: pointer; border-radius: 6px 6px 0 0; text-align: center; }
+    .pay-tab-btn.active { background: var(--primary); color: #fff; }
+    .direct-momo-box { display: none; background: #fffcf0; border: 1.5px solid #f59e0b; padding: 1.2rem; border-radius: 8px; margin-bottom: 1rem; }
+    .momo-number-box { background: #1a1a2e; color: #f59e0b; font-family: monospace; font-size: 1.25rem; font-weight: bold; padding: 0.75rem; border-radius: 6px; text-align: center; margin: 0.4rem 0 0.8rem; }
+  </style>
 </head>
 <body>
-  <nav class="navbar">
-    <a href="/" class="navbar-brand">🛍️ Shop<span>Wave</span></a>
-    <ul class="navbar-links"><li><a href="/cart">← Back to Cart</a></li></ul>
-  </nav>
-
+  <nav class="navbar"><a href="/" class="navbar-brand">🛍️ Shop with <span>ease</span></a><ul class="navbar-links"><li><a href="/cart">← Back to Cart</a></li></ul></nav>
+  
   <div class="page-container">
+    <h2 style="margin-bottom: 1.5rem;">Secure Checkout</h2>
     <div class="checkout-layout">
-      <form class="checkout-form" id="checkoutForm">
-        <h3>Customer Details</h3>
-        <div class="form-group" style="margin-top:1rem;">
-          <label>Full Name *</label>
-          <input type="text" id="name" required placeholder="Kwame Mensah">
+      <div class="checkout-form">
+        <!-- Choose Payment Method -->
+        <div class="payment-tab-bar">
+          <button class="pay-tab-btn active" id="btnOnline" onclick="togglePaymentMethod('online')">📱 Paystack (MoMo/Card)</button>
+          <button class="pay-tab-btn" id="btnDirect" onclick="togglePaymentMethod('direct')">💳 Direct MoMo Transfer</button>
         </div>
-        <div class="form-group">
-          <label>Email Address *</label>
-          <input type="email" id="email" required placeholder="kwame@example.com">
-        </div>
-        <div class="form-group">
-          <label>Phone Number (MoMo / WhatsApp) *</label>
-          <input type="tel" id="phone" required placeholder="0244123456">
-        </div>
-        <div class="form-group">
-          <label>Delivery Address *</label>
-          <input type="text" id="address" required placeholder="East Legon, Accra">
-        </div>
-        <button type="submit" class="btn" id="payBtn" style="background:var(--secondary); font-size:1rem;">
-          Pay with Paystack (MoMo / Card) 💳
-        </button>
-      </form>
+
+        <form id="checkoutForm">
+          <div class="form-group"><label>Full Name *</label><input type="text" id="name" required placeholder="John Doe"></div>
+          <div class="form-group"><label>Email Address *</label><input type="email" id="email" required placeholder="john@example.com"></div>
+          <div class="form-group"><label>MoMo Phone Number *</label><input type="tel" id="phone" required placeholder="0244123456"></div>
+
+          <!-- Direct MoMo Instructions (Shown only when Direct is picked) -->
+          <div class="direct-momo-box" id="directMomoBox">
+            <h4 style="color: #b7791f; margin-bottom: 0.4rem;">📥 Direct MoMo Steps:</h4>
+            <ol style="margin-left: 1.2rem; font-size: 0.9rem; line-height: 1.5; color: #4a5568;">
+              <li>Send exactly the total amount to MTN Mobile Money:</li>
+              <div class="momo-number-box">0536473017</div>
+              <li>Account Name: <strong>Nathaniel Appiah</strong></li>
+              <li>Wait for the MoMo SMS and copy the <strong>Transaction ID / Reference</strong> (10-digit number)</li>
+            </ol>
+            <div class="form-group" style="margin-top: 1rem;">
+              <label style="color:#b7791f; font-weight:bold;">Paste MoMo Transaction ID / Token *</label>
+              <input type="text" id="momoTxId" placeholder="e.g. 2481029481">
+            </div>
+          </div>
+
+          <button type="submit" class="btn-buy" id="payBtn" style="font-size:1.1rem; padding: 1rem;">
+            🔓 Pay with Paystack 💳
+          </button>
+        </form>
+      </div>
       <div class="cart-summary" id="orderSummary"></div>
     </div>
   </div>
