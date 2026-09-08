@@ -12,10 +12,20 @@ const PORT = process.env.PORT || 3000;
 const ORDERS_FILE = path.join(__dirname, 'orders.json');
 const PRODUCTS_FILE = path.join(__dirname, 'products.json');
 const SETTINGS_FILE = path.join(__dirname, 'settings.json');
+const VOUCHERS_FILE = path.join(__dirname, 'vouchers.json');
+const CATEGORIES_FILE = path.join(__dirname, 'categories.json');
 
-// Default initial catalog
+// Default initial categories
+const DEFAULT_CATEGORIES = [
+  { id: 1, name: "Online Books", icon: "📚", isPaywallBook: true },
+  { id: 2, name: "Results Checker", icon: "🎫", isPaywallBook: false },
+  { id: 3, name: "Electronics", icon: "💻", isPaywallBook: false },
+  { id: 4, name: "Fashion", icon: "👕", isPaywallBook: false },
+  { id: 5, name: "Home Essentials", icon: "🏠", isPaywallBook: false }
+];
+
+// Initial Catalog
 const DEFAULT_PRODUCTS = [
-  // 📚 eBooks with Free Preview + Paid Full Access
   {
     id: 1,
     name: "Starting a Business in Ghana (PDF Guide)",
@@ -24,13 +34,13 @@ const DEFAULT_PRODUCTS = [
     pages: 145,
     category: "Online Books",
     image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400",
-    description: "The complete practical guide to starting, funding, and running a profitable business in Ghana.",
+    description: "Practical step-by-step roadmap to building and scaling a profitable business in Ghana.",
     previewUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", // Free sample
     downloadUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" // Full book (Protected)
   },
   {
     id: 2,
-    name: "Personal Finance & T-Bill Investment (eBook)",
+    name: "Personal Finance & T-Bill Investments (eBook)",
     author: "E. Osei",
     price: 45,
     pages: 110,
@@ -40,38 +50,40 @@ const DEFAULT_PRODUCTS = [
     previewUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
     downloadUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
   },
-  // 🛍️ Physical Items
+  {
+    id: 101,
+    name: "WASSCE Results Checker (Serial + PIN)",
+    price: 22,
+    category: "Results Checker",
+    image: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400",
+    description: "Instant Serial Number and PIN to check WASSCE School & Nov/Dec results on the official WAEC portal."
+  },
   {
     id: 3,
-    name: "Wireless Headphones",
+    name: "Wireless Noise-Cancelling Headphones",
     price: 250,
     category: "Electronics",
     image: "https://picsum.photos/id/1/400/300",
-    description: "Premium noise cancellation headphones with deep bass."
-  },
-  {
-    id: 4,
-    name: "Running Sneakers",
-    price: 290,
-    category: "Fashion",
-    image: "https://picsum.photos/id/3/400/300",
-    description: "Lightweight running shoes for daily workouts."
+    description: "Premium wireless headphones with deep bass and microphone."
   }
 ];
 
 const DEFAULT_SETTINGS = {
   storeName: "Shop with ease",
   announcement: "⚡ Read sample previews for free! Full PDF unlocked right after MoMo payment 🇬🇭",
-  heroTitle: "Shop Quality Products & Instant eBooks",
-  heroSubtitle: "Read sample book previews for free. Pay securely with MoMo or Card to download full books.",
+  heroTitle: "Results Checkers, eBooks & Quality Products",
+  heroSubtitle: "Read sample book previews for free. Pay securely with MoMo or Card to unlock full books.",
   whatsappNumber: "233536473017",
   supportPhone: "0536473017",
   supportEmail: "support@shopwithease.com",
-  shopAddress: "Accra, Ghana",
-  aboutTitle: "About Shop with ease",
-  aboutText: "We are Ghana's trusted store for quality physical items and softcopy educational books with instant MoMo checkout.",
-  aboutImage: "https://images.unsplash.com/photo-1556742049-0a67e55722c3?w=600"
+  shopAddress: "Accra, Ghana"
 };
+
+const DEFAULT_VOUCHERS = [
+  { id: 1, type: "WASSCE", serial: "WASS24019283", pin: "849201948271", used: false },
+  { id: 2, type: "BECE", serial: "BECE24091823", pin: "573829104829", used: false },
+  { id: 3, type: "CSSPS", serial: "CSSPS2400192", pin: "192837465019", used: false }
+];
 
 function getJsonFile(file, defaultData) {
   try {
@@ -86,6 +98,8 @@ function saveJsonFile(file, data) {
 
 if (!fs.existsSync(PRODUCTS_FILE)) saveJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
 if (!fs.existsSync(SETTINGS_FILE)) saveJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS);
+if (!fs.existsSync(VOUCHERS_FILE)) saveJsonFile(VOUCHERS_FILE, DEFAULT_VOUCHERS);
+if (!fs.existsSync(CATEGORIES_FILE)) saveJsonFile(CATEGORIES_FILE, DEFAULT_CATEGORIES);
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -93,10 +107,17 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/api/payment', paymentRoutes);
 
-// PUBLIC PRODUCTS API (Secured: Strips full downloadUrl so customers cannot steal books)
+// ==================== PUBLIC STORE APIS ====================
+
+// 1. Categories API
+app.get('/api/categories', (req, res) => {
+  res.json(getJsonFile(CATEGORIES_FILE, DEFAULT_CATEGORIES));
+});
+
+// 2. Safe Products API (Hides full downloadUrl from public view)
 app.get('/api/products', (req, res) => {
   const products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
-  const safeProducts = products.map(p => ({
+  res.json(products.map(p => ({
     id: p.id,
     name: p.name,
     author: p.author,
@@ -106,21 +127,21 @@ app.get('/api/products', (req, res) => {
     image: p.image,
     description: p.description,
     previewUrl: p.previewUrl // Public sample preview
-  }));
-  res.json(safeProducts);
+  })));
 });
 
-// PREVIEW DETAILS API
+// 3. Book Preview API
 app.get('/api/products/:id/preview', (req, res) => {
   const products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
   const p = products.find(x => x.id === Number(req.params.id));
-  if (!p) return res.status(404).json({ error: 'Book not found' });
+  if (!p) return res.status(404).json({ error: 'Item not found' });
   res.json({
     id: p.id,
     name: p.name,
     author: p.author || 'N/A',
     price: p.price,
     pages: p.pages || '--',
+    category: p.category,
     description: p.description,
     previewUrl: p.previewUrl || "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
   });
@@ -128,7 +149,7 @@ app.get('/api/products/:id/preview', (req, res) => {
 
 app.get('/api/settings', (req, res) => res.json(getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS)));
 
-// ORDER VERIFICATION & FULL BOOK UNLOCK
+// ==================== ORDER VERIFICATION & UNLOCKING ====================
 app.get('/api/orders/:ref', async (req, res) => {
   const ref = (req.params.ref || '').trim();
   const orders = getJsonFile(ORDERS_FILE, []);
@@ -144,18 +165,58 @@ app.get('/api/orders/:ref', async (req, res) => {
       const tx = pr.data.data;
       const cartItems = tx.metadata?.cartItems || [];
 
-      // Unlock complete full download URLs for paid books
+      let vouchers = getJsonFile(VOUCHERS_FILE, DEFAULT_VOUCHERS);
+      let assignedCheckers = [];
       let downloads = [];
+
       if (Array.isArray(cartItems) && cartItems.length > 0) {
         cartItems.forEach(item => {
           const matched = products.find(p => p.id === item.id || p.name === item.name);
+          
+          // Allocate PINs for Results Checkers
+          if (matched && matched.category === 'Results Checker') {
+            const qty = item.qty || 1;
+            for (let k = 0; k < qty; k++) {
+              let typeKey = 'WASSCE';
+              if (matched.name.includes('BECE')) typeKey = 'BECE';
+              if (matched.name.includes('Placement') || matched.name.includes('CSSPS')) typeKey = 'CSSPS';
+
+              let unused = vouchers.find(v => v.type === typeKey && !v.used);
+              if (!unused) {
+                unused = {
+                  id: Date.now() + Math.random(),
+                  type: typeKey,
+                  serial: typeKey + '24' + Math.floor(100000 + Math.random() * 900000),
+                  pin: Math.floor(100000000000 + Math.random() * 900000000000).toString(),
+                  used: true,
+                  assignedTo: tx.customer.email
+                };
+                vouchers.push(unused);
+              } else {
+                unused.used = true;
+                unused.assignedTo = tx.customer.email;
+              }
+
+              assignedCheckers.push({
+                itemName: matched.name,
+                type: unused.type,
+                serial: unused.serial,
+                pin: unused.pin,
+                portalUrl: unused.type === 'CSSPS' ? 'https://cssps.gov.gh' : 'https://ghana.waecdirect.org'
+              });
+            }
+          }
+
+          // Unlock Full PDF for paid Online Books
           if (matched && matched.downloadUrl) {
             downloads.push({ name: item.name, downloadUrl: matched.downloadUrl });
           }
         });
       }
 
-      const isDigital = downloads.length > 0;
+      saveJsonFile(VOUCHERS_FILE, vouchers);
+
+      const isDigital = assignedCheckers.length > 0 || downloads.length > 0;
       const no = {
         reference: tx.reference,
         amount: tx.amount / 100,
@@ -165,8 +226,8 @@ app.get('/api/orders/:ref', async (req, res) => {
         address: tx.metadata?.address || 'Accra',
         items: tx.metadata?.itemsSummary || 'Order Items',
         status: isDigital ? 'Delivered' : 'Packaging',
+        checkers: assignedCheckers,
         downloads: downloads,
-        deliveryNote: isDigital ? 'Full book unlocked! Download your complete PDF below.' : 'Order is being packaged for dispatch.',
         paidAt: tx.paid_at || new Date().toISOString()
       };
 
@@ -178,7 +239,7 @@ app.get('/api/orders/:ref', async (req, res) => {
   res.status(404).json({ success: false, message: 'Order not found' });
 });
 
-// Admin Authentication
+// Admin Auth Middleware
 function verifyAdmin(req, res, next) {
   const { password } = req.body;
   if (password !== (process.env.ADMIN_PASSWORD || 'admin123')) {
@@ -189,20 +250,38 @@ function verifyAdmin(req, res, next) {
 
 app.post('/api/admin/orders', verifyAdmin, (req, res) => res.json({ success: true, orders: getJsonFile(ORDERS_FILE, []).reverse() }));
 
-app.post('/api/admin/update-progress', verifyAdmin, (req, res) => {
-  const { reference, status, deliveryNote } = req.body;
-  const orders = getJsonFile(ORDERS_FILE, []);
-  const order = orders.find(o => o.reference && o.reference.toLowerCase() === (reference || '').toLowerCase());
-  if (order) {
-    order.status = status || order.status;
-    order.deliveryNote = deliveryNote || order.deliveryNote || '';
-    order.updatedAt = new Date().toISOString();
-    saveJsonFile(ORDERS_FILE, orders);
-    return res.json({ success: true, message: 'Order updated' });
+// ==================== DYNAMIC CATEGORIES CRUD ====================
+app.post('/api/admin/categories/save', verifyAdmin, (req, res) => {
+  const { category } = req.body;
+  let categories = getJsonFile(CATEGORIES_FILE, DEFAULT_CATEGORIES);
+
+  if (category.id) {
+    const idx = categories.findIndex(c => c.id === Number(category.id));
+    if (idx !== -1) {
+      categories[idx] = { ...categories[idx], ...category, id: Number(category.id) };
+    }
+  } else {
+    categories.push({
+      id: Date.now(),
+      name: category.name.trim(),
+      icon: category.icon || '🛍️',
+      isPaywallBook: Boolean(category.isPaywallBook)
+    });
   }
-  res.status(404).json({ success: false, message: 'Order not found' });
+
+  saveJsonFile(CATEGORIES_FILE, categories);
+  res.json({ success: true, categories });
 });
 
+app.post('/api/admin/categories/delete', verifyAdmin, (req, res) => {
+  const { categoryId } = req.body;
+  let categories = getJsonFile(CATEGORIES_FILE, DEFAULT_CATEGORIES);
+  categories = categories.filter(c => c.id !== Number(categoryId));
+  saveJsonFile(CATEGORIES_FILE, categories);
+  res.json({ success: true, categories });
+});
+
+// Products CRUD
 app.post('/api/admin/products/save', verifyAdmin, (req, res) => {
   let products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
   const p = req.body.product;
@@ -223,8 +302,7 @@ app.post('/api/admin/products/delete', verifyAdmin, (req, res) => {
 });
 
 app.post('/api/admin/settings/save', verifyAdmin, (req, res) => {
-  const current = getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS);
-  saveJsonFile(SETTINGS_FILE, { ...current, ...req.body.settings });
+  saveJsonFile(SETTINGS_FILE, { ...getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS), ...req.body.settings });
   res.json({ success: true });
 });
 
