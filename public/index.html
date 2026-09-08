@@ -59,12 +59,9 @@
     </div>
   </div>
 
-  <!-- 🏷️ Category Filter Buttons -->
-  <div class="filter-section">
-    <button class="filter-btn active" onclick="filterCat('all', this)">All</button>
-    <button class="filter-btn" onclick="filterCat('Electronics', this)">Electronics</button>
-    <button class="filter-btn" onclick="filterCat('Fashion', this)">Fashion</button>
-    <button class="filter-btn" onclick="filterCat('Home', this)">Home</button>
+  <!-- 🏷️ Dynamic Category Filter Buttons -->
+  <div class="filter-section" id="categoryFiltersContainer">
+    <button class="filter-btn active">Loading categories...</button>
   </div>
 
   <!-- 🛍️ Product Catalog Grid -->
