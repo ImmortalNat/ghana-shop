@@ -12,24 +12,23 @@ const PORT = process.env.PORT || 3000;
 const ORDERS_FILE = path.join(__dirname, 'orders.json');
 const PRODUCTS_FILE = path.join(__dirname, 'products.json');
 const SETTINGS_FILE = path.join(__dirname, 'settings.json');
-const VOUCHERS_FILE = path.join(__dirname, 'vouchers.json');
 const CATEGORIES_FILE = path.join(__dirname, 'categories.json');
 
-// Protected Directories for Uploaded PDF Files
 const PREVIEWS_DIR = path.join(__dirname, '..', 'public', 'previews');
 const PROTECTED_BOOKS_DIR = path.join(__dirname, 'protected_books');
 
 if (!fs.existsSync(PREVIEWS_DIR)) fs.mkdirSync(PREVIEWS_DIR, { recursive: true });
 if (!fs.existsSync(PROTECTED_BOOKS_DIR)) fs.mkdirSync(PROTECTED_BOOKS_DIR, { recursive: true });
 
+// Clean Categories (No Results Checkers)
 const DEFAULT_CATEGORIES = [
   { id: 1, name: "Online Books", icon: "📚", isPaywallBook: true },
-  { id: 2, name: "Results Checker", icon: "🎫", isPaywallBook: false },
-  { id: 3, name: "Electronics", icon: "💻", isPaywallBook: false },
-  { id: 4, name: "Fashion", icon: "👕", isPaywallBook: false },
-  { id: 5, name: "Home Essentials", icon: "🏠", isPaywallBook: false }
+  { id: 2, name: "Electronics", icon: "💻", isPaywallBook: false },
+  { id: 3, name: "Fashion", icon: "👕", isPaywallBook: false },
+  { id: 4, name: "Home Essentials", icon: "🏠", isPaywallBook: false }
 ];
 
+// Clean Products List
 const DEFAULT_PRODUCTS = [
   {
     id: 1,
@@ -39,35 +38,42 @@ const DEFAULT_PRODUCTS = [
     pages: 145,
     category: "Online Books",
     image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400",
-    description: "The complete step-by-step roadmap to building and scaling a profitable business in Ghana.",
+    description: "The complete practical guide to starting, funding, and running a profitable business in Ghana.",
     previewUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
     hasProtectedFile: false
   },
   {
-    id: 101,
-    name: "WASSCE Results Checker (Serial + PIN)",
-    price: 22,
-    category: "Results Checker",
-    image: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400",
-    description: "Instant Serial Number and PIN to check WASSCE results on the official WAEC portal."
+    id: 2,
+    name: "Personal Finance & T-Bill Investment (eBook)",
+    author: "E. Osei",
+    price: 45,
+    pages: 110,
+    category: "Online Books",
+    image: "https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=400",
+    description: "Learn how to budget, save, and invest in Treasury Bills and real estate in Ghana.",
+    previewUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+    hasProtectedFile: false
+  },
+  {
+    id: 3,
+    name: "Wireless Headphones",
+    price: 250,
+    category: "Electronics",
+    image: "https://picsum.photos/id/1/400/300",
+    description: "Premium noise cancellation headphones with deep bass."
   }
 ];
 
 const DEFAULT_SETTINGS = {
   storeName: "Shop with ease",
   announcement: "⚡ Read sample previews for free! Full PDF unlocked right after MoMo payment 🇬🇭",
-  heroTitle: "Results Checkers, eBooks & Quality Products",
+  heroTitle: "Quality Products & Instant eBooks",
   heroSubtitle: "Read sample book previews for free. Pay securely with MoMo or Card to unlock full books.",
   whatsappNumber: "233536473017",
   supportPhone: "0536473017",
   supportEmail: "support@shopwithease.com",
   shopAddress: "Accra, Ghana"
 };
-
-const DEFAULT_VOUCHERS = [
-  { id: 1, type: "WASSCE", serial: "WASS24019283", pin: "849201948271", used: false },
-  { id: 2, type: "BECE", serial: "BECE24091823", pin: "573829104829", used: false }
-];
 
 function getJsonFile(file, defaultData) {
   try {
@@ -82,11 +88,9 @@ function saveJsonFile(file, data) {
 
 if (!fs.existsSync(PRODUCTS_FILE)) saveJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
 if (!fs.existsSync(SETTINGS_FILE)) saveJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS);
-if (!fs.existsSync(VOUCHERS_FILE)) saveJsonFile(VOUCHERS_FILE, DEFAULT_VOUCHERS);
 if (!fs.existsSync(CATEGORIES_FILE)) saveJsonFile(CATEGORIES_FILE, DEFAULT_CATEGORIES);
 
 app.use(cors());
-// 100MB body limit to support uploading complete PDF books directly
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
@@ -119,38 +123,28 @@ app.get('/api/products/:id/preview', (req, res) => {
 
 app.get('/api/settings', (req, res) => res.json(getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS)));
 
-// ==================== PROTECTED PDF FILE DOWNLOAD GATEKEEPER ====================
+// Protected Download Gatekeeper
 app.get('/api/download/:ref/:id', (req, res) => {
   const { ref, id } = req.params;
   const orders = getJsonFile(ORDERS_FILE, []);
   const products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
 
   const order = orders.find(o => o.reference && o.reference.toLowerCase() === ref.toLowerCase());
-  if (!order) {
-    return res.status(403).send('Access Denied: Unverified Order Reference.');
-  }
+  if (!order) return res.status(403).send('Access Denied.');
 
   const product = products.find(p => p.id === Number(id));
-  if (!product) {
-    return res.status(404).send('Book not found.');
-  }
+  if (!product) return res.status(404).send('Book not found.');
 
-  // Look for stored PDF on server
   const storedFilePath = path.join(PROTECTED_BOOKS_DIR, `book_${id}.pdf`);
   if (fs.existsSync(storedFilePath)) {
     const cleanFileName = `${product.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
     return res.download(storedFilePath, cleanFileName);
   }
-
-  // Fallback to external URL if it was added as a link
-  if (product.downloadUrl) {
-    return res.redirect(product.downloadUrl);
-  }
-
-  res.status(404).send('Download file not found on server.');
+  if (product.downloadUrl) return res.redirect(product.downloadUrl);
+  res.status(404).send('File not found.');
 });
 
-// ORDER VERIFICATION & UNLOCKING
+// ORDER VERIFICATION (eBooks & Products Only - No Vouchers)
 app.get('/api/orders/:ref', async (req, res) => {
   const ref = (req.params.ref || '').trim();
   const orders = getJsonFile(ORDERS_FILE, []);
@@ -166,60 +160,17 @@ app.get('/api/orders/:ref', async (req, res) => {
       const tx = pr.data.data;
       const cartItems = tx.metadata?.cartItems || [];
 
-      let vouchers = getJsonFile(VOUCHERS_FILE, DEFAULT_VOUCHERS);
-      let assignedCheckers = [];
       let downloads = [];
-
       if (Array.isArray(cartItems) && cartItems.length > 0) {
         cartItems.forEach(item => {
           const matched = products.find(p => p.id === item.id || p.name === item.name);
-          
-          if (matched && matched.category === 'Results Checker') {
-            const qty = item.qty || 1;
-            for (let k = 0; k < qty; k++) {
-              let typeKey = 'WASSCE';
-              if (matched.name.includes('BECE')) typeKey = 'BECE';
-              if (matched.name.includes('Placement') || matched.name.includes('CSSPS')) typeKey = 'CSSPS';
-
-              let unused = vouchers.find(v => v.type === typeKey && !v.used);
-              if (!unused) {
-                unused = {
-                  id: Date.now() + Math.random(),
-                  type: typeKey,
-                  serial: typeKey + '24' + Math.floor(100000 + Math.random() * 900000),
-                  pin: Math.floor(100000000000 + Math.random() * 900000000000).toString(),
-                  used: true,
-                  assignedTo: tx.customer.email
-                };
-                vouchers.push(unused);
-              } else {
-                unused.used = true;
-                unused.assignedTo = tx.customer.email;
-              }
-
-              assignedCheckers.push({
-                itemName: matched.name,
-                type: unused.type,
-                serial: unused.serial,
-                pin: unused.pin,
-                portalUrl: unused.type === 'CSSPS' ? 'https://cssps.gov.gh' : 'https://ghana.waecdirect.org'
-              });
-            }
-          }
-
-          // Build secure download link for uploaded PDF eBooks
           if (matched && (matched.hasProtectedFile || matched.downloadUrl || matched.category === 'Online Books')) {
-            downloads.push({
-              name: item.name,
-              downloadUrl: `/api/download/${tx.reference}/${matched.id}`
-            });
+            downloads.push({ name: item.name, downloadUrl: `/api/download/${tx.reference}/${matched.id}` });
           }
         });
       }
 
-      saveJsonFile(VOUCHERS_FILE, vouchers);
-
-      const isDigital = assignedCheckers.length > 0 || downloads.length > 0;
+      const isDigital = downloads.length > 0;
       const no = {
         reference: tx.reference,
         amount: tx.amount / 100,
@@ -229,7 +180,6 @@ app.get('/api/orders/:ref', async (req, res) => {
         address: tx.metadata?.address || 'Accra',
         items: tx.metadata?.itemsSummary || 'Order Items',
         status: isDigital ? 'Delivered' : 'Packaging',
-        checkers: assignedCheckers,
         downloads: downloads,
         paidAt: tx.paid_at || new Date().toISOString()
       };
@@ -253,29 +203,37 @@ function verifyAdmin(req, res, next) {
 
 app.post('/api/admin/orders', verifyAdmin, (req, res) => res.json({ success: true, orders: getJsonFile(ORDERS_FILE, []).reverse() }));
 
-// Save Product & Direct PDF File Uploads
+app.post('/api/admin/update-progress', verifyAdmin, (req, res) => {
+  const { reference, status, deliveryNote } = req.body;
+  const orders = getJsonFile(ORDERS_FILE, []);
+  const order = orders.find(o => o.reference && o.reference.toLowerCase() === (reference || '').toLowerCase());
+  if (order) {
+    order.status = status || order.status;
+    order.deliveryNote = deliveryNote || '';
+    order.updatedAt = new Date().toISOString();
+    saveJsonFile(ORDERS_FILE, orders);
+    return res.json({ success: true, message: 'Order updated' });
+  }
+  res.status(404).json({ success: false, message: 'Order not found' });
+});
+
 app.post('/api/admin/products/save', verifyAdmin, (req, res) => {
   let products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
   const p = req.body.product;
   const prodId = p.id ? Number(p.id) : Date.now();
-
   let previewUrl = p.previewUrl || '';
   let hasProtectedFile = p.hasProtectedFile || false;
 
-  // 1. Process Uploaded Free Preview PDF File (Saved to public/previews)
   if (p.previewPdfBase64 && p.previewPdfBase64.startsWith('data:application/pdf;base64,')) {
     const base64Data = p.previewPdfBase64.replace(/^data:application\/pdf;base64,/, '');
     const previewFileName = `preview_${prodId}.pdf`;
-    const previewFilePath = path.join(PREVIEWS_DIR, previewFileName);
-    fs.writeFileSync(previewFilePath, base64Data, 'base64');
+    fs.writeFileSync(path.join(PREVIEWS_DIR, previewFileName), base64Data, 'base64');
     previewUrl = `/previews/${previewFileName}`;
   }
 
-  // 2. Process Uploaded Full Protected Book PDF File (Saved securely in protected_books)
   if (p.fullPdfBase64 && p.fullPdfBase64.startsWith('data:application/pdf;base64,')) {
     const base64Data = p.fullPdfBase64.replace(/^data:application\/pdf;base64,/, '');
-    const bookFilePath = path.join(PROTECTED_BOOKS_DIR, `book_${prodId}.pdf`);
-    fs.writeFileSync(bookFilePath, base64Data, 'base64');
+    fs.writeFileSync(path.join(PROTECTED_BOOKS_DIR, `book_${prodId}.pdf`), base64Data, 'base64');
     hasProtectedFile = true;
   }
 
@@ -304,18 +262,8 @@ app.post('/api/admin/products/save', verifyAdmin, (req, res) => {
 });
 
 app.post('/api/admin/products/delete', verifyAdmin, (req, res) => {
-  const pId = Number(req.body.productId);
-  let products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS).filter(p => p.id !== pId);
+  let products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS).filter(p => p.id !== Number(req.body.productId));
   saveJsonFile(PRODUCTS_FILE, products);
-
-  // Clean up any files associated with this product
-  try {
-    const previewFile = path.join(PREVIEWS_DIR, `preview_${pId}.pdf`);
-    const fullFile = path.join(PROTECTED_BOOKS_DIR, `book_${pId}.pdf`);
-    if (fs.existsSync(previewFile)) fs.unlinkSync(previewFile);
-    if (fs.existsSync(fullFile)) fs.unlinkSync(fullFile);
-  } catch(e) {}
-
   res.json({ success: true });
 });
 
