@@ -55,16 +55,14 @@ const DEFAULT_PRODUCTS = [
   }
 ];
 
-// Initial Customer Reviews
 const DEFAULT_REVIEWS = [
   { id: 1, productId: 1, name: "Kofi Owusu", rating: 5, comment: "100% Legit! Paid with MTN MoMo and the PDF downloaded immediately. Very practical guide.", date: "2025-02-15" },
-  { id: 2, productId: 1, name: "Abena Serwaa", rating: 5, comment: "Best business book for Ghana. Clear steps on how to register and start without huge capital.", date: "2025-02-18" },
-  { id: 3, productId: 2, name: "Samuel Mensah", rating: 5, comment: "The breakdown of T-Bills and treasury investments in Ghana opened my eyes. Worth every cedi!", date: "2025-02-20" }
+  { id: 2, productId: 1, name: "Abena Serwaa", rating: 5, comment: "Best business book for Ghana. Clear steps on how to register and start without huge capital.", date: "2025-02-18" }
 ];
 
 const DEFAULT_SETTINGS = {
   storeName: "Shop with ease",
-  announcement: "⚡ Read sample previews for free! Full PDF unlocked right after MoMo payment 🇬🇭",
+  announcement: "⚡ Welcome! Pay instantly via Paystack or Direct MoMo to Mary Appiah (0536473017) 🇬🇭",
   heroTitle: "Quality Products & Instant eBooks",
   heroSubtitle: "Read previews for free. Pay with Paystack or send Direct MoMo to get instant download access.",
   whatsappNumber: "233536473017",
@@ -102,7 +100,6 @@ app.get('/api/products', (req, res) => {
   const products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
   const reviews = getJsonFile(REVIEWS_FILE, DEFAULT_REVIEWS);
 
-  // Attach average rating and count to each product
   const safeProducts = products.map(p => {
     const prodReviews = reviews.filter(r => Number(r.productId) === Number(p.id));
     const avgRating = prodReviews.length > 0 ? (prodReviews.reduce((sum, r) => sum + Number(r.rating), 0) / prodReviews.length).toFixed(1) : "5.0";
@@ -130,35 +127,61 @@ app.get('/api/products/:id/preview', (req, res) => {
   res.json(p);
 });
 
-// ==================== REVIEWS APIs ====================
 app.get('/api/reviews/:productId', (req, res) => {
   const reviews = getJsonFile(REVIEWS_FILE, DEFAULT_REVIEWS);
-  const prodReviews = reviews.filter(r => Number(r.productId) === Number(req.params.productId));
-  res.json(prodReviews.reverse());
+  res.json(reviews.filter(r => Number(r.productId) === Number(req.params.productId)).reverse());
 });
 
 app.post('/api/reviews', (req, res) => {
   const { productId, name, rating, comment } = req.body;
-  if (!productId || !name || !rating || !comment) {
-    return res.status(400).json({ success: false, message: 'All fields are required.' });
-  }
-
+  if (!productId || !name || !rating || !comment) return res.status(400).json({ success: false });
   const reviews = getJsonFile(REVIEWS_FILE, DEFAULT_REVIEWS);
-  const newReview = {
-    id: Date.now(),
-    productId: Number(productId),
-    name: name.trim(),
-    rating: Number(rating) || 5,
-    comment: comment.trim(),
-    date: new Date().toISOString().split('T')[0]
-  };
-
-  reviews.push(newReview);
+  const newR = { id: Date.now(), productId: Number(productId), name: name.trim(), rating: Number(rating) || 5, comment: comment.trim(), date: new Date().toISOString().split('T')[0] };
+  reviews.push(newR);
   saveJsonFile(REVIEWS_FILE, reviews);
-  res.json({ success: true, review: newReview });
+  res.json({ success: true, review: newR });
 });
 
 app.get('/api/settings', (req, res) => res.json(getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS)));
+
+// ==================== 🗺️ GOOGLE SITEMAP & ROBOTS.TXT ====================
+app.get('/sitemap.xml', (req, res) => {
+  const baseUrl = process.env.BASE_URL || 'https://shop-wave-shop.onrender.com';
+  const products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+
+  // Static core pages
+  const staticPages = ['', '/cart', '/checkout', '/track'];
+  staticPages.forEach(page => {
+    xml += `  <url>\n`;
+    xml += `    <loc>${baseUrl}${page}</loc>\n`;
+    xml += `    <changefreq>daily</changefreq>\n`;
+    xml += `    <priority>${page === '' ? '1.0' : '0.8'}</priority>\n`;
+    xml += `  </url>\n`;
+  });
+
+  // Product / eBook Preview Pages
+  products.forEach(p => {
+    xml += `  <url>\n`;
+    xml += `    <loc>${baseUrl}/preview/${p.id}</loc>\n`;
+    xml += `    <changefreq>weekly</changefreq>\n`;
+    xml += `    <priority>0.7</priority>\n`;
+    xml += `  </url>\n`;
+  });
+
+  xml += `</urlset>`;
+
+  res.header('Content-Type', 'application/xml');
+  res.send(xml);
+});
+
+app.get('/robots.txt', (req, res) => {
+  const baseUrl = process.env.BASE_URL || 'https://shop-wave-shop.onrender.com';
+  res.type('text/plain');
+  res.send(`User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/download/\n\nSitemap: ${baseUrl}/sitemap.xml`);
+});
 
 // Protected Download Gatekeeper
 app.get('/api/download/:ref/:id', (req, res) => {
@@ -168,7 +191,7 @@ app.get('/api/download/:ref/:id', (req, res) => {
 
   const order = orders.find(o => o.reference && o.reference.toLowerCase() === ref.toLowerCase());
   if (!order) return res.status(403).send('Access Denied. Order not verified.');
-  if (order.status === 'Awaiting MoMo Verification') return res.status(403).send('Access Denied: Please wait for admin to verify your MoMo Transfer.');
+  if (order.status === 'Awaiting MoMo Verification') return res.status(403).send('Access Denied: Waiting for MoMo verification.');
 
   const product = products.find(p => p.id === Number(id));
   if (!product) return res.status(404).send('Book not found.');
@@ -182,7 +205,44 @@ app.get('/api/download/:ref/:id', (req, res) => {
   res.status(404).send('File not found.');
 });
 
-// ORDER VERIFICATION & STATUS
+// Create Direct MoMo Order
+app.post('/api/payment/direct-momo', (req, res) => {
+  const { name, email, phone, transactionId, amount, cartItems, itemsSummary } = req.body;
+  if (!email || !transactionId || !amount) return res.status(400).json({ success: false });
+
+  const orders = getJsonFile(ORDERS_FILE, []);
+  const products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
+
+  let downloads = [];
+  if (Array.isArray(cartItems)) {
+    cartItems.forEach(item => {
+      const matched = products.find(p => p.id === item.id || p.name === item.name);
+      if (matched && (matched.hasProtectedFile || matched.downloadUrl || matched.category === 'Online Books')) {
+        downloads.push({ name: item.name, downloadUrl: `/api/download/${transactionId}/${matched.id}` });
+      }
+    });
+  }
+
+  const newOrder = {
+    reference: transactionId.trim(),
+    amount: Number(amount),
+    customerEmail: email,
+    customerName: name || 'Direct MoMo Customer',
+    phone: phone,
+    address: 'Direct MoMo Transfer',
+    items: itemsSummary,
+    status: 'Awaiting MoMo Verification',
+    downloads: downloads,
+    isDirectMomo: true,
+    paidAt: new Date().toISOString()
+  };
+
+  orders.push(newOrder);
+  saveJsonFile(ORDERS_FILE, orders);
+  res.json({ success: true, reference: transactionId.trim() });
+});
+
+// ORDER VERIFICATION
 app.get('/api/orders/:ref', async (req, res) => {
   const ref = (req.params.ref || '').trim();
   const orders = getJsonFile(ORDERS_FILE, []);
@@ -230,27 +290,31 @@ app.get('/api/orders/:ref', async (req, res) => {
   res.status(404).json({ success: false, message: 'Order not found' });
 });
 
-// Admin endpoints
+// Admin Auth
 function verifyAdmin(req, res, next) {
   const { password } = req.body;
-  if (password !== (process.env.ADMIN_PASSWORD || 'admin123')) {
-    return res.status(401).json({ success: false, message: 'Incorrect Admin Password' });
-  }
+  if (password !== (process.env.ADMIN_PASSWORD || 'admin123')) return res.status(401).json({ success: false });
   next();
 }
 
 app.post('/api/admin/orders', verifyAdmin, (req, res) => res.json({ success: true, orders: getJsonFile(ORDERS_FILE, []).reverse() }));
-
-app.post('/api/admin/reviews', verifyAdmin, (req, res) => {
-  res.json({ success: true, reviews: getJsonFile(REVIEWS_FILE, DEFAULT_REVIEWS).reverse() });
+app.post('/api/admin/reviews', verifyAdmin, (req, res) => res.json({ success: true, reviews: getJsonFile(REVIEWS_FILE, DEFAULT_REVIEWS).reverse() }));
+app.post('/api/admin/reviews/delete', verifyAdmin, (req, res) => {
+  saveJsonFile(REVIEWS_FILE, getJsonFile(REVIEWS_FILE, DEFAULT_REVIEWS).filter(r => r.id !== Number(req.body.reviewId)));
+  res.json({ success: true });
 });
 
-app.post('/api/admin/reviews/delete', verifyAdmin, (req, res) => {
-  const { reviewId } = req.body;
-  let reviews = getJsonFile(REVIEWS_FILE, DEFAULT_REVIEWS);
-  reviews = reviews.filter(r => r.id !== Number(reviewId));
-  saveJsonFile(REVIEWS_FILE, reviews);
-  res.json({ success: true });
+app.post('/api/admin/update-status', verifyAdmin, (req, res) => {
+  const { reference, status } = req.body;
+  const orders = getJsonFile(ORDERS_FILE, []);
+  const order = orders.find(o => o.reference && o.reference.toLowerCase() === (reference || '').toLowerCase());
+  if (order) {
+    order.status = status;
+    order.updatedAt = new Date().toISOString();
+    saveJsonFile(ORDERS_FILE, orders);
+    return res.json({ success: true });
+  }
+  res.status(404).json({ success: false });
 });
 
 app.post('/api/admin/products/save', verifyAdmin, (req, res) => {
@@ -284,8 +348,7 @@ app.post('/api/admin/products/save', verifyAdmin, (req, res) => {
 });
 
 app.post('/api/admin/products/delete', verifyAdmin, (req, res) => {
-  let products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS).filter(p => p.id !== Number(req.body.productId));
-  saveJsonFile(PRODUCTS_FILE, products);
+  saveJsonFile(PRODUCTS_FILE, getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS).filter(p => p.id !== Number(req.body.productId)));
   res.json({ success: true });
 });
 
@@ -303,25 +366,13 @@ app.post('/api/admin/categories/save', verifyAdmin, (req, res) => {
 });
 
 app.post('/api/admin/categories/delete', verifyAdmin, (req, res) => {
-  let categories = getJsonFile(CATEGORIES_FILE, DEFAULT_CATEGORIES).filter(c => c.id !== Number(req.body.categoryId));
-  saveJsonFile(CATEGORIES_FILE, categories);
-  res.json({ success: true, categories });
+  saveJsonFile(CATEGORIES_FILE, getJsonFile(CATEGORIES_FILE, DEFAULT_CATEGORIES).filter(c => c.id !== Number(req.body.categoryId)));
+  res.json({ success: true });
 });
 
 app.post('/api/admin/settings/save', verifyAdmin, (req, res) => {
   saveJsonFile(SETTINGS_FILE, { ...getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS), ...req.body.settings });
   res.json({ success: true });
-});
-
-// 🤖 SEO & BOT ROUTES
-app.get('/robots.txt', (req, res) => {
-  res.type('text/plain');
-  res.sendFile(path.join(__dirname, '..', 'public', 'robots.txt'));
-});
-
-app.get('/sitemap.xml', (req, res) => {
-  res.type('application/xml');
-  res.sendFile(path.join(__dirname, '..', 'public', 'sitemap.xml'));
 });
 
 // Page routes
@@ -332,7 +383,7 @@ app.get(['/checkout', '/checkout.html'], (req, res) => res.sendFile(path.join(__
 app.get(['/success', '/success.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'success.html')));
 app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'admin.html')));
 
-// 📦 GUARANTEED TRACK ROUTE
+// Dynamic Track Route
 app.get(['/track', '/track.html'], (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="en">
@@ -355,7 +406,7 @@ app.get(['/track', '/track.html'], (req, res) => {
   <div class="page-container" style="max-width:600px; margin-top:3rem; text-align:center;">
     <div style="background:#fff; padding:2rem; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.05);">
       <h2>📦 Track Your Order</h2>
-      <p style="color:#6c757d; margin:0.5rem 0 1.2rem;">Enter your Order Reference Code:</p>
+      <p style="color:#6c757d; margin:0.5rem 0 1.2rem;">Enter your Order Reference Code / MoMo Transaction ID:</p>
       <form id="f" style="display:flex; gap:0.5rem; margin-bottom:1.5rem;">
         <input type="text" id="ref" placeholder="Order Reference" required style="flex:1; padding:0.8rem; border:1.5px solid #ddd; border-radius:6px; font-size:1rem;">
         <button type="submit" class="btn" style="width:auto; padding:0.8rem 1.5rem; background:#0a7e8c;">Track</button>
@@ -394,10 +445,16 @@ app.get(['/track', '/track.html'], (req, res) => {
       if (data.success) {
         const o = data.order;
         document.getElementById('stText').textContent = 'Status: ' + o.status;
-        document.getElementById('noteText').innerHTML = '<strong>Latest Update:</strong><br>' + (o.deliveryNote || 'Your order has been confirmed.');
+        
+        let statusNote = o.deliveryNote || 'Your order has been confirmed.';
+        if (o.status === 'Awaiting MoMo Verification') {
+          statusNote = '🔒 Awaiting Direct MoMo Verification. Please WhatsApp Mary Appiah (0536473017) with your Transaction Reference screenshot to instantly unlock your book download!';
+        }
+        document.getElementById('noteText').innerHTML = '<strong>Latest Update:</strong><br>' + statusNote;
+        
         document.getElementById('detailsText').innerHTML = '<strong>Order Reference:</strong> ' + o.reference + '<br><strong>Customer:</strong> ' + o.customerName + '<br><strong>Amount:</strong> GH₵' + Number(o.amount).toFixed(2) + '<br><strong>Items:</strong> ' + o.items;
         
-        if (o.downloads && o.downloads.length > 0) {
+        if (o.downloads && o.downloads.length > 0 && o.status !== 'Awaiting MoMo Verification') {
           document.getElementById('downloadContainer').style.display = 'block';
           document.getElementById('downloadList').innerHTML = o.downloads.map(d => \`<div style="margin-bottom:0.5rem;"><strong>\${d.name}</strong><br><a href="\${d.downloadUrl}" target="_blank" class="dl-btn">📥 Download Complete PDF</a></div>\`).join('');
         }
@@ -411,6 +468,7 @@ app.get(['/track', '/track.html'], (req, res) => {
         document.getElementById('wa').href = 'https://wa.me/233536473017?text=' + encodeURIComponent('Hello, I am checking my order with code: ' + o.reference);
       } else {
         document.getElementById('stText').innerHTML = '<span style="color:red;">❌ Order not found. Check reference code.</span>';
+        document.getElementById('noteText').innerHTML = 'If you paid via Direct MoMo, please WhatsApp Mary Appiah (0536473017) directly to activate your download.';
         document.getElementById('detailsText').innerHTML = '';
       }
     };
