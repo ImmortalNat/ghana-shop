@@ -93,7 +93,7 @@ app.use(express.urlencoded({ limit: '100mb', extended: true }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/api/payment', paymentRoutes);
 
-// Public APIs
+// Public Store APIs
 app.get('/api/categories', (req, res) => res.json(getJsonFile(CATEGORIES_FILE, DEFAULT_CATEGORIES)));
 
 app.get('/api/products', (req, res) => {
@@ -144,7 +144,7 @@ app.post('/api/reviews', (req, res) => {
 
 app.get('/api/settings', (req, res) => res.json(getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS)));
 
-// ==================== 🗺️ GOOGLE SITEMAP & ROBOTS.TXT ====================
+// ==================== 🗺️ GOOGLE SITEMAP & ROBOTS.TXT (Ultra-Fast Caching) ====================
 app.get('/sitemap.xml', (req, res) => {
   const baseUrl = process.env.BASE_URL || 'https://shop-wave-shop.onrender.com';
   const products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
@@ -152,7 +152,6 @@ app.get('/sitemap.xml', (req, res) => {
   let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
   xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
 
-  // Static core pages
   const staticPages = ['', '/cart', '/checkout', '/track'];
   staticPages.forEach(page => {
     xml += `  <url>\n`;
@@ -162,7 +161,6 @@ app.get('/sitemap.xml', (req, res) => {
     xml += `  </url>\n`;
   });
 
-  // Product / eBook Preview Pages
   products.forEach(p => {
     xml += `  <url>\n`;
     xml += `    <loc>${baseUrl}/preview/${p.id}</loc>\n`;
@@ -174,13 +172,15 @@ app.get('/sitemap.xml', (req, res) => {
   xml += `</urlset>`;
 
   res.header('Content-Type', 'application/xml');
-  res.send(xml);
+  res.header('Cache-Control', 'public, max-age=86400');
+  res.status(200).send(xml);
 });
 
 app.get('/robots.txt', (req, res) => {
   const baseUrl = process.env.BASE_URL || 'https://shop-wave-shop.onrender.com';
   res.type('text/plain');
-  res.send(`User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/download/\n\nSitemap: ${baseUrl}/sitemap.xml`);
+  res.header('Cache-Control', 'public, max-age=86400');
+  res.send(`User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\n\nSitemap: ${baseUrl}/sitemap.xml`);
 });
 
 // Protected Download Gatekeeper
@@ -383,7 +383,7 @@ app.get(['/checkout', '/checkout.html'], (req, res) => res.sendFile(path.join(__
 app.get(['/success', '/success.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'success.html')));
 app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'admin.html')));
 
-// Dynamic Track Route
+// Dynamic Track Route (Guaranteed)
 app.get(['/track', '/track.html'], (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="en">
