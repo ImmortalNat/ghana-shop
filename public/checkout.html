@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="/css/styles.css">
   <style>
     .payment-tab-bar { display: flex; gap: 0.5rem; border-bottom: 2px solid var(--gray-200); margin-bottom: 1.5rem; }
-    .pay-tab-btn { flex: 1; padding: 0.8rem; background: var(--gray-100); border: none; font-size: 0.95rem; font-weight: bold; color: var(--gray-700); cursor: pointer; border-radius: 6px 6px 0 0; text-align: center; }
+    .pay-tab-btn { flex: 1; padding: 0.8rem; background: var(--gray-100); border: none; font-size: 0.95rem; font-weight: bold; color: var(--gray-600); cursor: pointer; border-radius: 6px 6px 0 0; text-align: center; }
     .pay-tab-btn.active { background: var(--primary); color: #fff; }
     .direct-momo-box { display: none; background: #fffcf0; border: 1.5px solid #f59e0b; padding: 1.2rem; border-radius: 8px; margin-bottom: 1rem; }
     .momo-number-box { background: #1a1a2e; color: #f59e0b; font-family: monospace; font-size: 1.25rem; font-weight: bold; padding: 0.75rem; border-radius: 6px; text-align: center; margin: 0.4rem 0 0.8rem; }
@@ -19,7 +19,6 @@
     <h2 style="margin-bottom: 1.5rem;">Secure Checkout</h2>
     <div class="checkout-layout">
       <div class="checkout-form">
-        <!-- Choose Payment Method -->
         <div class="payment-tab-bar">
           <button type="button" class="pay-tab-btn active" id="btnOnline" onclick="togglePaymentMethod('online')">📱 Paystack (MoMo/Card)</button>
           <button type="button" class="pay-tab-btn" id="btnDirect" onclick="togglePaymentMethod('direct')">💳 Direct MoMo Transfer</button>
@@ -29,9 +28,8 @@
           <div class="form-group"><label>Full Name *</label><input type="text" id="name" required placeholder="Kwame Mensah"></div>
           <div class="form-group"><label>Email Address *</label><input type="email" id="email" required placeholder="kwame@example.com"></div>
           <div class="form-group"><label>MoMo Phone Number *</label><input type="tel" id="phone" required placeholder="0244123456"></div>
-          <div class="form-group"><label>Delivery Address (If physical item) *</label><input type="text" id="address" required placeholder="Accra, Ghana"></div>
+          <div class="form-group"><label>Delivery Address *</label><input type="text" id="address" required placeholder="Accra, Ghana"></div>
 
-          <!-- Direct MoMo Box -->
           <div class="direct-momo-box" id="directMomoBox">
             <h4 style="color: #b7791f; margin-bottom: 0.4rem;">📥 Direct MoMo Transfer Details:</h4>
             <ol style="margin-left: 1.2rem; font-size: 0.9rem; line-height: 1.6; color: #4a5568;">
@@ -49,9 +47,6 @@
           <button type="submit" class="btn" id="payBtn" style="font-size:1.1rem; padding: 1rem; margin-top:1rem;">
             Loading Checkout...
           </button>
-          <p style="text-align: center; color: #6c757d; font-size: 0.8rem; margin-top: 0.8rem;">
-            🔒 256-Bit Encrypted & Secured Checkout.
-          </p>
         </form>
       </div>
       <div class="cart-summary" id="orderSummary"></div>
