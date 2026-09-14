@@ -9,13 +9,32 @@ document.getElementById('orderSummary').innerHTML = `
 `;
 
 let selectedMethod = 'online';
+let hasDigitalItem = false;
+
+// Check if there are any online books in the cart
+cart.forEach(item => {
+  if (item.category === 'Online Books' || item.name.toLowerCase().includes('pdf') || item.name.toLowerCase().includes('ebook')) {
+    hasDigitalItem = true;
+  }
+});
+
+// Set button text based on cart contents
+function updateButtonText() {
+  const payBtn = document.getElementById('payBtn');
+  if (selectedMethod === 'online') {
+    payBtn.textContent = hasDigitalItem ? '🔓 Pay & Auto-Download PDF 📥' : '🔓 Pay & Complete Order 💳';
+    payBtn.style.background = 'var(--primary)';
+  } else {
+    payBtn.textContent = 'Submit Direct MoMo Payment ✓';
+    payBtn.style.background = '#f59e0b';
+  }
+}
 
 window.togglePaymentMethod = function(method) {
   selectedMethod = method;
   const btnOnline = document.getElementById('btnOnline');
   const btnDirect = document.getElementById('btnDirect');
   const directMomoBox = document.getElementById('directMomoBox');
-  const payBtn = document.getElementById('payBtn');
   const txInput = document.getElementById('momoTxId');
 
   if (method === 'online') {
@@ -23,17 +42,27 @@ window.togglePaymentMethod = function(method) {
     btnDirect.classList.remove('active');
     directMomoBox.style.display = 'none';
     txInput.required = false;
-    payBtn.style.background = 'var(--accent)';
-    payBtn.textContent = 'Pay with Paystack 💳';
   } else {
     btnOnline.classList.remove('active');
     btnDirect.classList.add('active');
     directMomoBox.style.display = 'block';
     txInput.required = true;
-    payBtn.style.background = '#f59e0b';
-    payBtn.textContent = 'Submit Direct MoMo Payment ✓';
   }
+  updateButtonText();
 };
+
+async function loadSettings() {
+  try {
+    const res = await fetch('/api/settings?t=' + Date.now());
+    const s = await res.json();
+    document.getElementById('displayMomoNum').textContent = s.momoNumber || '0536473017';
+    document.getElementById('displayMomoName').textContent = s.momoName || 'Mary Appiah';
+    updateButtonText(); // Set initial button text
+  } catch (err) {
+    console.error('Error loading MoMo settings');
+    updateButtonText();
+  }
+}
 
 document.getElementById('checkoutForm').onsubmit = async (e) => {
   e.preventDefault();
@@ -42,6 +71,7 @@ document.getElementById('checkoutForm').onsubmit = async (e) => {
   const name = document.getElementById('name').value;
   const email = document.getElementById('email').value;
   const phone = document.getElementById('phone').value;
+  const address = document.getElementById('address').value;
   const itemsList = cart.map(i => `${i.name}`).join(', ');
 
   btn.disabled = true;
@@ -55,15 +85,14 @@ document.getElementById('checkoutForm').onsubmit = async (e) => {
         body: JSON.stringify({
           email: email,
           amount: tot,
-          metadata: { customerName: name, phone: phone, itemsSummary: itemsList, cartItems: cart }
+          metadata: { customerName: name, phone: phone, address: address, itemsSummary: itemsList, cartItems: cart }
         })
       });
       const d = await res.json();
       if (d.status && d.data.authorization_url) window.location.href = d.data.authorization_url;
-      else { alert('Paystack failed.'); btn.disabled = false; btn.textContent = 'Pay with Paystack 💳'; }
-    } catch (err) { alert('Connection error.'); btn.disabled = false; }
+      else { alert('Paystack failed.'); btn.disabled = false; updateButtonText(); }
+    } catch (err) { alert('Connection error.'); btn.disabled = false; updateButtonText(); }
   } else {
-    // Direct MoMo Submission
     const txId = document.getElementById('momoTxId').value.trim();
     if (!txId) return alert('Please enter your MoMo Transaction ID.');
     
@@ -73,13 +102,7 @@ document.getElementById('checkoutForm').onsubmit = async (e) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: name,
-          email: email,
-          phone: phone,
-          transactionId: txId,
-          amount: tot,
-          cartItems: cart,
-          itemsSummary: itemsList
+          name, email, phone, address, transactionId: txId, amount: tot, cartItems: cart, itemsSummary: itemsList
         })
       });
       const d = await res.json();
@@ -87,11 +110,13 @@ document.getElementById('checkoutForm').onsubmit = async (e) => {
         window.location.href = '/success?reference=' + encodeURIComponent(txId);
       } else {
         alert('Direct MoMo submission failed.');
-        btn.disabled = false;
+        btn.disabled = false; updateButtonText();
       }
     } catch(err) {
       alert('Error submitting payment.');
-      btn.disabled = false;
+      btn.disabled = false; updateButtonText();
     }
   }
 };
+
+document.addEventListener('DOMContentLoaded', loadSettings);
