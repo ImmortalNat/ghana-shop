@@ -82,13 +82,18 @@
 
       <!-- TAB 4: STOREFRONT -->
       <div id="storefrontTab" style="display:none;">
-        <form id="storefrontForm" onsubmit="saveStorefront(event)">
+             <form id="storefrontForm" onsubmit="saveStorefront(event)">
           <div class="admin-card">
-            <h3>🏷️ Store Branding</h3>
+            <h3>🏷️ Store Branding & Contact</h3>
             <div class="form-group"><label>Store Name</label><input type="text" id="setStoreName" required></div>
             <div class="form-group"><label>Announcement Bar</label><input type="text" id="setAnnouncement"></div>
             <div class="form-group"><label>Hero Title</label><input type="text" id="setHeroTitle" required></div>
             <div class="form-group"><label>WhatsApp Support Number</label><input type="text" id="setWhatsapp" required></div>
+          </div>
+          <div class="admin-card">
+            <h3>💳 Direct MoMo Payment Settings</h3>
+            <div class="form-group"><label>MoMo Phone Number (For Checkout)</label><input type="text" id="setMomoNumber" placeholder="e.g. 0536473017"></div>
+            <div class="form-group"><label>MoMo Account Name</label><input type="text" id="setMomoName" placeholder="e.g. Mary Appiah"></div>
           </div>
           <button type="submit" class="btn" style="background:#0a7e8c; padding:0.9rem;">💾 Save Settings</button>
         </form>
