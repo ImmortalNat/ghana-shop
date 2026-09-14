@@ -38,4 +38,33 @@ a { text-decoration: none; color: inherit; }
 .summary-row { display: flex; justify-content: space-between; margin: 0.6rem 0; }
 .summary-row.total { font-size: 1.2rem; font-weight: 700; border-top: 1px solid var(--gray-200); padding-top: 0.8rem; margin-top: 0.8rem; }
 .toast { position: fixed; bottom: 20px; right: 20px; background: #333; color: white; padding: 12px 20px; border-radius: 8px; display: none; z-index: 1000; }
-@media (max-width: 768px) { .cart-layout, .checkout-layout { grid-template-columns: 1fr; } }
+/* ==================== MOBILE RESPONSIVENESS & CENTERED LOGO ==================== */
+@media (max-width: 768px) { 
+  .checkout-layout, .cart-layout, .form-row { 
+    grid-template-columns: 1fr; 
+  } 
+
+  /* Centered Mobile Navbar */
+  .navbar {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 1rem;
+    text-align: center;
+  }
+
+  .navbar-brand {
+    justify-content: center;
+    width: 100%;
+    font-size: 1.8rem;
+  }
+
+  .navbar-links {
+    justify-content: center;
+    width: 100%;
+    gap: 1.5rem;
+    padding-top: 0.5rem;
+    border-top: 1.5px dashed var(--gray-200);
+  }
+}
