@@ -28,33 +28,18 @@ const DEFAULT_CATEGORIES = [
   { id: 4, name: "Home Essentials", icon: "🏠", isPaywallBook: false }
 ];
 
-const DEFAULT_PRODUCTS = [
-  {
-    id: 1,
-    name: "Starting a Business in Ghana (PDF Guide)",
-    author: "Kwame Mensah",
-    price: 50,
-    pages: 145,
-    category: "Online Books",
-    image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400",
-    description: "The complete practical guide to starting, funding, and running a profitable business in Ghana.",
-    previewUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-    hasProtectedFile: false
-  },
-  {
-    id: 2,
-    name: "Personal Finance & T-Bill Investment (eBook)",
-    author: "E. Osei",
-    price: 45,
-    pages: 110,
-    category: "Online Books",
-    image: "https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=400",
-    description: "Learn how to budget, save, and invest in Treasury Bills and real estate in Ghana.",
-    previewUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-    hasProtectedFile: false
-  }
-];
-
+const DEFAULT_SETTINGS = {
+  storeName: "Shop with ease",
+  announcement: "⚡ Welcome! Pay instantly via Paystack or Direct MoMo 🇬🇭",
+  heroTitle: "Quality Products & Instant eBooks",
+  heroSubtitle: "Read previews for free. Pay with Paystack or send Direct MoMo to get instant download access.",
+  whatsappNumber: "233536473017",
+  supportPhone: "0536473017",
+  supportEmail: "support@shopwithease.com",
+  shopAddress: "Accra, Ghana",
+  momoName: "Mary Appiah",
+  momoNumber: "0536473017"
+};
 const DEFAULT_REVIEWS = [
   { id: 1, productId: 1, name: "Kofi Owusu", rating: 5, comment: "100% Legit! Paid with MTN MoMo and the PDF downloaded immediately. Very practical guide.", date: "2025-02-15" },
   { id: 2, productId: 1, name: "Abena Serwaa", rating: 5, comment: "Best business book for Ghana. Clear steps on how to register and start without huge capital.", date: "2025-02-18" }
