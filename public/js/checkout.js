@@ -11,14 +11,12 @@ document.getElementById('orderSummary').innerHTML = `
 let selectedMethod = 'online';
 let hasDigitalItem = false;
 
-// Check if there are any online books in the cart
 cart.forEach(item => {
-  if (item.category === 'Online Books' || item.name.toLowerCase().includes('pdf') || item.name.toLowerCase().includes('ebook')) {
+  if (item.category === 'Online Books' || (item.name && (item.name.toLowerCase().includes('pdf') || item.name.toLowerCase().includes('ebook')))) {
     hasDigitalItem = true;
   }
 });
 
-// Set button text based on cart contents
 function updateButtonText() {
   const payBtn = document.getElementById('payBtn');
   if (selectedMethod === 'online') {
@@ -57,9 +55,8 @@ async function loadSettings() {
     const s = await res.json();
     document.getElementById('displayMomoNum').textContent = s.momoNumber || '0536473017';
     document.getElementById('displayMomoName').textContent = s.momoName || 'Mary Appiah';
-    updateButtonText(); // Set initial button text
+    updateButtonText();
   } catch (err) {
-    console.error('Error loading MoMo settings');
     updateButtonText();
   }
 }
@@ -96,14 +93,12 @@ document.getElementById('checkoutForm').onsubmit = async (e) => {
     const txId = document.getElementById('momoTxId').value.trim();
     if (!txId) return alert('Please enter your MoMo Transaction ID.');
     
-    btn.textContent = 'Submitting your payment...';
+    btn.textContent = 'Submitting payment...';
     try {
       const res = await fetch('/api/payment/direct-momo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name, email, phone, address, transactionId: txId, amount: tot, cartItems: cart, itemsSummary: itemsList
-        })
+        body: JSON.stringify({ name, email, phone, address, transactionId: txId, amount: tot, cartItems: cart, itemsSummary: itemsList })
       });
       const d = await res.json();
       if (d.success) {
