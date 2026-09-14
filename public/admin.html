@@ -427,6 +427,16 @@
       document.getElementById('setWhatsapp').value = s.whatsappNumber || '';
     }
 
+        async function loadSettings() {
+      const s = await (await fetch('/api/settings')).json();
+      document.getElementById('setStoreName').value = s.storeName || '';
+      document.getElementById('setAnnouncement').value = s.announcement || '';
+      document.getElementById('setHeroTitle').value = s.heroTitle || '';
+      document.getElementById('setWhatsapp').value = s.whatsappNumber || '';
+      if(document.getElementById('setMomoNumber')) document.getElementById('setMomoNumber').value = s.momoNumber || '';
+      if(document.getElementById('setMomoName')) document.getElementById('setMomoName').value = s.momoName || '';
+    }
+
     async function saveStorefront(e) {
       e.preventDefault();
       await fetch('/api/admin/settings/save', {
@@ -438,12 +448,13 @@
             storeName: document.getElementById('setStoreName').value,
             announcement: document.getElementById('setAnnouncement').value,
             heroTitle: document.getElementById('setHeroTitle').value,
-            heroSubtitle: document.getElementById('setHeroSubtitle').value,
-            whatsappNumber: document.getElementById('setWhatsapp').value
+            whatsappNumber: document.getElementById('setWhatsapp').value,
+            momoNumber: document.getElementById('setMomoNumber') ? document.getElementById('setMomoNumber').value : '',
+            momoName: document.getElementById('setMomoName') ? document.getElementById('setMomoName').value : ''
           }
         })
       });
-      alert('Settings saved!');
+      alert('Settings saved! 🚀');
     }
   </script>
 </body>
