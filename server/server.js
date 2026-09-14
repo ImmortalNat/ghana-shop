@@ -28,18 +28,33 @@ const DEFAULT_CATEGORIES = [
   { id: 4, name: "Home Essentials", icon: "🏠", isPaywallBook: false }
 ];
 
-const DEFAULT_SETTINGS = {
-  storeName: "Shop with ease",
-  announcement: "⚡ Welcome! Pay instantly via Paystack or Direct MoMo 🇬🇭",
-  heroTitle: "Quality Products & Instant eBooks",
-  heroSubtitle: "Read previews for free. Pay with Paystack or send Direct MoMo to get instant download access.",
-  whatsappNumber: "233536473017",
-  supportPhone: "0536473017",
-  supportEmail: "support@shopwithease.com",
-  shopAddress: "Accra, Ghana",
-  momoName: "Mary Appiah",
-  momoNumber: "0536473017"
-};
+const DEFAULT_PRODUCTS = [
+  {
+    id: 1,
+    name: "Starting a Business in Ghana (PDF Guide)",
+    author: "Kwame Mensah",
+    price: 50,
+    pages: 145,
+    category: "Online Books",
+    image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400",
+    description: "The complete practical guide to starting, funding, and running a profitable business in Ghana.",
+    previewUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+    hasProtectedFile: false
+  },
+  {
+    id: 2,
+    name: "Personal Finance & T-Bill Investment (eBook)",
+    author: "E. Osei",
+    price: 45,
+    pages: 110,
+    category: "Online Books",
+    image: "https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=400",
+    description: "Learn how to budget, save, and invest in Treasury Bills and real estate in Ghana.",
+    previewUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+    hasProtectedFile: false
+  }
+];
+
 const DEFAULT_REVIEWS = [
   { id: 1, productId: 1, name: "Kofi Owusu", rating: 5, comment: "100% Legit! Paid with MTN MoMo and the PDF downloaded immediately. Very practical guide.", date: "2025-02-15" },
   { id: 2, productId: 1, name: "Abena Serwaa", rating: 5, comment: "Best business book for Ghana. Clear steps on how to register and start without huge capital.", date: "2025-02-18" }
@@ -53,7 +68,9 @@ const DEFAULT_SETTINGS = {
   whatsappNumber: "233536473017",
   supportPhone: "0536473017",
   supportEmail: "support@shopwithease.com",
-  shopAddress: "Accra, Ghana"
+  shopAddress: "Accra, Ghana",
+  momoName: "Mary Appiah",
+  momoNumber: "0536473017"
 };
 
 function getJsonFile(file, defaultData) {
@@ -78,7 +95,7 @@ app.use(express.urlencoded({ limit: '100mb', extended: true }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/api/payment', paymentRoutes);
 
-// Public Store APIs
+// Public APIs
 app.get('/api/categories', (req, res) => res.json(getJsonFile(CATEGORIES_FILE, DEFAULT_CATEGORIES)));
 
 app.get('/api/products', (req, res) => {
@@ -129,7 +146,7 @@ app.post('/api/reviews', (req, res) => {
 
 app.get('/api/settings', (req, res) => res.json(getJsonFile(SETTINGS_FILE, DEFAULT_SETTINGS)));
 
-// ==================== 🗺️ GOOGLE SITEMAP & ROBOTS.TXT (Ultra-Fast Caching) ====================
+// ==================== 🗺️ SITEMAP & ROBOTS ====================
 app.get('/sitemap.xml', (req, res) => {
   const baseUrl = process.env.BASE_URL || 'https://shop-wave-shop.onrender.com';
   const products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
@@ -193,7 +210,7 @@ app.get('/api/download/:ref/:id', (req, res) => {
 // Create Direct MoMo Order
 app.post('/api/payment/direct-momo', (req, res) => {
   const { name, email, phone, transactionId, amount, cartItems, itemsSummary } = req.body;
-  if (!email || !transactionId || !amount) return res.status(400).json({ success: false });
+  if (!email || !transactionId || !amount) return res.status(400).json({ success: false, message: 'Missing fields' });
 
   const orders = getJsonFile(ORDERS_FILE, []);
   const products = getJsonFile(PRODUCTS_FILE, DEFAULT_PRODUCTS);
@@ -209,7 +226,7 @@ app.post('/api/payment/direct-momo', (req, res) => {
   }
 
   const newOrder = {
-    reference: transactionId.trim(),
+    reference: String(transactionId).trim(),
     amount: Number(amount),
     customerEmail: email,
     customerName: name || 'Direct MoMo Customer',
@@ -278,7 +295,7 @@ app.get('/api/orders/:ref', async (req, res) => {
 // Admin Auth
 function verifyAdmin(req, res, next) {
   const { password } = req.body;
-  if (password !== (process.env.ADMIN_PASSWORD || 'admin123')) return res.status(401).json({ success: false });
+  if (password !== (process.env.ADMIN_PASSWORD || 'admin123')) return res.status(401).json({ success: false, message: 'Unauthorized' });
   next();
 }
 
@@ -299,7 +316,7 @@ app.post('/api/admin/update-status', verifyAdmin, (req, res) => {
     saveJsonFile(ORDERS_FILE, orders);
     return res.json({ success: true });
   }
-  res.status(404).json({ success: false });
+  res.status(404).json({ success: false, message: 'Order not found' });
 });
 
 app.post('/api/admin/products/save', verifyAdmin, (req, res) => {
