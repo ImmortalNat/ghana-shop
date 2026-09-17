@@ -1,27 +1,47 @@
-const cart = JSON.parse(localStorage.getItem('shopwave_cart') || '[]');
-if (!cart.length) window.location.href = '/cart';
-
-const cartSubtotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+let cart = [];
+let cartSubtotal = 0;
 let deliveryFee = 0;
-let grandTotal = cartSubtotal;
+let grandTotal = 0;
 let deliveryLocations = [];
 
 let selectedMethod = 'online';
 let hasPhysicalItem = false;
 let hasDigitalItem = false;
 
-// Analyze Cart Content
-cart.forEach(item => {
-  const isBook = item.category === 'Online Books' || (item.name && (item.name.toLowerCase().includes('pdf') || item.name.toLowerCase().includes('ebook')));
-  if (isBook) hasDigitalItem = true;
-  else hasPhysicalItem = true;
-});
+function initCart() {
+  try {
+    cart = JSON.parse(localStorage.getItem('shopwave_cart') || '[]');
+  } catch (e) {
+    cart = [];
+  }
 
-// Render Order Summary
+  if (!cart || !cart.length) {
+    window.location.href = '/cart';
+    return;
+  }
+
+  cartSubtotal = cart.reduce((s, i) => s + (Number(i.price || 0) * Number(i.qty || 1)), 0);
+  grandTotal = cartSubtotal;
+
+  cart.forEach(item => {
+    const cat = (item.category || '').toLowerCase();
+    const nm = (item.name || '').toLowerCase();
+    const isBook = cat.includes('book') || nm.includes('pdf') || nm.includes('ebook');
+    if (isBook) hasDigitalItem = true;
+    else hasPhysicalItem = true;
+  });
+
+  renderSummary();
+  loadSettingsAndDelivery();
+}
+
 function renderSummary() {
-  const summaryHtml = `
+  const summaryEl = document.getElementById('orderSummary');
+  if (!summaryEl) return;
+
+  summaryEl.innerHTML = `
     <h3>Your Order</h3>
-    ${cart.map(i => `<div class="summary-row"><span>${i.name} x${i.qty}</span><span>GH₵${(i.price * i.qty).toFixed(2)}</span></div>`).join('')}
+    ${cart.map(i => `<div class="summary-row"><span>${i.name} (x${i.qty || 1})</span><span>GH₵${(Number(i.price) * Number(i.qty || 1)).toFixed(2)}</span></div>`).join('')}
     
     <div style="border-top: 1px solid #dee2e6; margin-top: 1rem; padding-top: 1rem;">
       <div class="summary-row sub"><span>Subtotal:</span><span>GH₵${cartSubtotal.toFixed(2)}</span></div>
@@ -29,13 +49,14 @@ function renderSummary() {
       <div class="summary-row total"><span>Total to Pay:</span><span>GH₵${grandTotal.toFixed(2)}</span></div>
     </div>
   `;
-  document.getElementById('orderSummary').innerHTML = summaryHtml;
 }
 
 function updateButtonText() {
   const payBtn = document.getElementById('payBtn');
+  if (!payBtn) return;
+
   if (selectedMethod === 'online') {
-    payBtn.textContent = (hasDigitalItem && !hasPhysicalItem) ? '🔓 Pay & Auto-Download PDF 📥' : `💳 Pay GH₵${grandTotal.toFixed(2)} Securely`;
+    payBtn.textContent = (hasDigitalItem && !hasPhysicalItem) ? '🔓 Pay & Auto-Download PDF 📥' : `💳 Pay GH₵${grandTotal.toFixed(2)} with Paystack`;
     payBtn.style.background = 'var(--primary)';
   } else {
     payBtn.textContent = `Submit Direct MoMo Order (GH₵${grandTotal.toFixed(2)}) ✓`;
@@ -45,59 +66,27 @@ function updateButtonText() {
 
 window.togglePaymentMethod = function(method) {
   selectedMethod = method;
-  document.getElementById('btnOnline').classList.toggle('active', method === 'online');
-  document.getElementById('btnDirect').classList.toggle('active', method === 'direct');
-  document.getElementById('directMomoBox').style.display = method === 'online' ? 'none' : 'block';
-  document.getElementById('momoTxId').required = method === 'direct';
+  const btnOnline = document.getElementById('btnOnline');
+  const btnDirect = document.getElementById('btnDirect');
+  const directMomoBox = document.getElementById('directMomoBox');
+  const txInput = document.getElementById('momoTxId');
+
+  if (btnOnline) btnOnline.classList.toggle('active', method === 'online');
+  if (btnDirect) btnDirect.classList.toggle('active', method === 'direct');
+  if (directMomoBox) directMomoBox.style.display = method === 'online' ? 'none' : 'block';
+  if (txInput) txInput.required = (method === 'direct');
+
   updateButtonText();
 };
 
-// Cascading Region ➔ Town Dropdown Logic
 function populateRegions() {
   const regionSelect = document.getElementById('regionSelect');
-  if (!regionSelect) return;
+  if (!regionSelect || !deliveryLocations.length) return;
 
-  // Extract unique regions
-  const regions = [...new Set(deliveryLocations.map(l => l.region || "Greater Accra"))];
+  const regions = [...new Set(deliveryLocations.map(l => l.region || 'Greater Accra'))];
   regionSelect.innerHTML = `<option value="">-- Choose Ghana Region --</option>` +
     regions.map(r => `<option value="${r}">${r} Region</option>`).join('');
 }
-
-document.getElementById('regionSelect').addEventListener('change', (e) => {
-  const selectedRegion = e.target.value;
-  const townSelect = document.getElementById('townSelect');
-
-  if (!selectedRegion) {
-    townSelect.innerHTML = `<option value="">-- Select Region First --</option>`;
-    townSelect.disabled = true;
-    deliveryFee = 0;
-  } else {
-    const towns = deliveryLocations.filter(l => (l.region || "Greater Accra") === selectedRegion);
-    townSelect.innerHTML = `<option value="">-- Choose Town / Area --</option>` +
-      towns.map(t => `<option value="${t.id}">${t.town} (+ GH₵${Number(t.fee).toFixed(2)})</option>`).join('');
-    townSelect.disabled = false;
-    deliveryFee = 0;
-  }
-
-  grandTotal = cartSubtotal + deliveryFee;
-  renderSummary();
-  updateButtonText();
-});
-
-document.getElementById('townSelect').addEventListener('change', (e) => {
-  const selectedId = Number(e.target.value);
-  const selectedTown = deliveryLocations.find(l => l.id === selectedId);
-
-  if (selectedTown) {
-    deliveryFee = Number(selectedTown.fee);
-  } else {
-    deliveryFee = 0;
-  }
-
-  grandTotal = cartSubtotal + deliveryFee;
-  renderSummary();
-  updateButtonText();
-});
 
 async function loadSettingsAndDelivery() {
   try {
@@ -105,28 +94,35 @@ async function loadSettingsAndDelivery() {
       fetch('/api/settings?t=' + Date.now()),
       fetch('/api/delivery?t=' + Date.now())
     ]);
-    const s = await setRes.json();
-    deliveryLocations = await delRes.json();
+    
+    if (setRes.ok) {
+      const s = await setRes.json();
+      const numEl = document.getElementById('displayMomoNum');
+      const nameEl = document.getElementById('displayMomoName');
+      if (numEl) numEl.textContent = s.momoNumber || '0536473017';
+      if (nameEl) nameEl.textContent = s.momoName || 'Mary Appiah';
+    }
 
-    document.getElementById('displayMomoNum').textContent = s.momoNumber || '0536473017';
-    document.getElementById('displayMomoName').textContent = s.momoName || 'Mary Appiah';
+    if (delRes.ok) {
+      deliveryLocations = await delRes.json();
+    }
 
     const delBox = document.getElementById('deliveryZoneGroup');
     const addressInput = document.getElementById('address');
     const regionSelect = document.getElementById('regionSelect');
     const townSelect = document.getElementById('townSelect');
 
-    if (hasPhysicalItem) {
+    if (hasPhysicalItem && delBox) {
       delBox.style.display = 'block';
-      addressInput.required = true;
-      regionSelect.required = true;
-      townSelect.required = true;
+      if (addressInput) addressInput.required = true;
+      if (regionSelect) regionSelect.required = true;
+      if (townSelect) townSelect.required = true;
       populateRegions();
-    } else {
+    } else if (delBox) {
       delBox.style.display = 'none';
-      addressInput.required = false;
-      regionSelect.required = false;
-      townSelect.required = false;
+      if (addressInput) addressInput.required = false;
+      if (regionSelect) regionSelect.required = false;
+      if (townSelect) townSelect.required = false;
       deliveryFee = 0;
       grandTotal = cartSubtotal;
     }
@@ -134,39 +130,76 @@ async function loadSettingsAndDelivery() {
     renderSummary();
     updateButtonText();
   } catch (err) {
-    console.error('Error loading checkout setup', err);
-    grandTotal = cartSubtotal;
-    renderSummary();
-    updateButtonText();
+    console.error('Error loading checkout settings:', err);
   }
 }
 
-document.getElementById('checkoutForm').onsubmit = async (e) => {
-  e.preventDefault();
+document.addEventListener('change', (e) => {
+  if (e.target && e.target.id === 'regionSelect') {
+    const selectedRegion = e.target.value;
+    const townSelect = document.getElementById('townSelect');
+    if (!townSelect) return;
+
+    if (!selectedRegion) {
+      townSelect.innerHTML = `<option value="">-- Select Region First --</option>`;
+      townSelect.disabled = true;
+      deliveryFee = 0;
+    } else {
+      const towns = deliveryLocations.filter(l => (l.region || 'Greater Accra') === selectedRegion);
+      townSelect.innerHTML = `<option value="">-- Choose Town / Area --</option>` +
+        towns.map(t => `<option value="${t.id}">${t.town} (+ GH₵${Number(t.fee).toFixed(2)})</option>`).join('');
+      townSelect.disabled = false;
+      deliveryFee = 0;
+    }
+
+    grandTotal = cartSubtotal + deliveryFee;
+    renderSummary();
+    updateButtonText();
+  }
+
+  if (e.target && e.target.id === 'townSelect') {
+    const selectedId = Number(e.target.value);
+    const selectedTown = deliveryLocations.find(l => l.id === selectedId);
+
+    if (selectedTown) {
+      deliveryFee = Number(selectedTown.fee);
+    } else {
+      deliveryFee = 0;
+    }
+
+    grandTotal = cartSubtotal + deliveryFee;
+    renderSummary();
+    updateButtonText();
+  }
+});
+
+window.processCheckout = async function(e) {
+  if (e && e.preventDefault) e.preventDefault();
+
   const btn = document.getElementById('payBtn');
-  
-  const name = document.getElementById('name').value.trim();
-  const email = document.getElementById('email').value.trim();
-  const phone = document.getElementById('phone').value.trim();
-  
+  const name = (document.getElementById('name')?.value || '').trim();
+  const email = (document.getElementById('email')?.value || '').trim();
+  const phone = (document.getElementById('phone')?.value || '').trim();
+
   let fullAddress = 'Digital Delivery';
   if (hasPhysicalItem) {
-    const reg = document.getElementById('regionSelect').value;
-    const townId = Number(document.getElementById('townSelect').value);
+    const reg = document.getElementById('regionSelect')?.value || '';
+    const townId = Number(document.getElementById('townSelect')?.value || 0);
     const townObj = deliveryLocations.find(l => l.id === townId);
-    const street = document.getElementById('address').value.trim();
-    
-    const townName = townObj ? townObj.town : 'General';
+    const street = (document.getElementById('address')?.value || '').trim();
+    const townName = townObj ? townObj.town : 'General Area';
     fullAddress = `${street}, ${townName}, ${reg} Region`;
   }
 
-  let itemsList = cart.map(i => `${i.name} (x${i.qty})`).join(' | ');
+  let itemsList = cart.map(i => `${i.name} (x${i.qty || 1})`).join(' | ');
   if (deliveryFee > 0) itemsList += ` | Delivery Fee: GH₵${deliveryFee.toFixed(2)}`;
 
-  btn.disabled = true;
+  if (btn) {
+    btn.disabled = true;
+  }
 
   if (selectedMethod === 'online') {
-    btn.textContent = 'Connecting to Paystack...';
+    if (btn) btn.textContent = 'Connecting to Paystack...';
     try {
       const res = await fetch('/api/payment/initialize', {
         method: 'POST',
@@ -178,25 +211,57 @@ document.getElementById('checkoutForm').onsubmit = async (e) => {
         })
       });
       const d = await res.json();
-      if (d.status && d.data.authorization_url) window.location.href = d.data.authorization_url;
-      else { alert('Paystack failed.'); btn.disabled = false; updateButtonText(); }
-    } catch (err) { alert('Connection error.'); btn.disabled = false; updateButtonText(); }
+      if (d.status && d.data && d.data.authorization_url) {
+        window.location.href = d.data.authorization_url;
+      } else {
+        alert(d.message || 'Paystack payment initialization failed.');
+        if (btn) btn.disabled = false;
+        updateButtonText();
+      }
+    } catch (err) {
+      alert('Network connection error. Please try again.');
+      if (btn) btn.disabled = false;
+      updateButtonText();
+    }
   } else {
-    const txId = document.getElementById('momoTxId').value.trim();
-    if (!txId) return alert('Please enter your MoMo Transaction ID.');
-    
-    btn.textContent = 'Submitting your payment...';
+    const txId = (document.getElementById('momoTxId')?.value || '').trim();
+    if (!txId) {
+      alert('Please enter your MoMo Transaction ID.');
+      if (btn) btn.disabled = false;
+      updateButtonText();
+      return;
+    }
+
+    if (btn) btn.textContent = 'Submitting direct MoMo payment...';
     try {
       const res = await fetch('/api/payment/direct-momo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone, address: fullAddress, transactionId: txId, amount: grandTotal, cartItems: cart, itemsSummary: itemsList })
+        body: JSON.stringify({
+          name: name,
+          email: email,
+          phone: phone,
+          address: fullAddress,
+          transactionId: txId,
+          amount: grandTotal,
+          cartItems: cart,
+          itemsSummary: itemsList
+        })
       });
       const d = await res.json();
-      if (d.success) window.location.href = '/success?reference=' + encodeURIComponent(txId);
-      else { alert('Direct MoMo submission failed.'); btn.disabled = false; updateButtonText(); }
-    } catch(err) { alert('Error submitting payment.'); btn.disabled = false; updateButtonText(); }
+      if (d.success) {
+        window.location.href = '/success?reference=' + encodeURIComponent(txId);
+      } else {
+        alert(d.message || 'Direct MoMo submission failed.');
+        if (btn) btn.disabled = false;
+        updateButtonText();
+      }
+    } catch (err) {
+      alert('Error submitting payment.');
+      if (btn) btn.disabled = false;
+      updateButtonText();
+    }
   }
 };
 
-document.addEventListener('DOMContentLoaded', loadSettingsAndDelivery);
+document.addEventListener('DOMContentLoaded', initCart);
