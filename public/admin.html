@@ -48,7 +48,7 @@
         <div class="products-grid" id="productsList" style="padding:0;"></div>
       </div>
 
-      <!-- TAB 2: DELIVERY FEES MANAGER -->
+         <!-- TAB 1.5: DELIVERY FEES MANAGER -->
       <div id="deliveryTab" style="display:none;">
         <div class="admin-card">
           <h3>➕ Add Ghana Region, Town & Delivery Fee</h3>
@@ -86,7 +86,6 @@
             <button type="submit" class="btn" style="grid-column:1/-1; background:#0a7e8c;">💾 Save Delivery Town & Fee</button>
           </form>
         </div>
-
         <div class="admin-card">
           <h3>Active Ghana Delivery Towns & Fees</h3>
           <div id="deliveryList" style="margin-top:0.8rem;">Loading...</div>
@@ -223,6 +222,64 @@
     // ================= DELIVERY FEES MANAGER =================
     async function loadDelivery() {
       const res = await fetch('/api/delivery?t=' + Date.now());
+      const locations = await res.json();
+      const box = document.getElementById('deliveryList');
+      if (!locations.length) {
+        box.innerHTML = '<p>No delivery zones set. Delivery will be free.</p>';
+      } else {
+        box.innerHTML = locations.map(l => `
+          <div style="display:flex; justify-content:space-between; padding:0.8rem; background:#f8f9fa; border:1px solid #ddd; border-radius:6px; margin-bottom:0.5rem; align-items:center;">
+            <div>
+              <span style="background:#e0f4f4; color:#0a7e8c; font-size:0.75rem; font-weight:bold; padding:2px 6px; border-radius:4px;">${l.region || 'Greater Accra'}</span>
+              <strong style="margin-left:0.5rem; color:#1a1a2e;">${l.town || l.location}</strong>
+            </div>
+            <div>
+              <span style="color:#0a7e8c; font-weight:bold; margin-right:1rem;">GH₵${Number(l.fee).toFixed(2)}</span>
+              <button onclick="deleteDelivery(${l.id})" style="background:#dc3545; border:none; color:#fff; padding:4px 8px; border-radius:4px; cursor:pointer;">Delete</button>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    async function loadDelivery() {
+      const res = await fetch('/api/delivery');
+      const locations = await res.json();
+      const box = document.getElementById('deliveryList');
+      if (!locations.length) {
+        box.innerHTML = '<p>No delivery zones set. Delivery will be free.</p>';
+      } else {
+        box.innerHTML = locations.map(l => `
+          <div style="display:flex; justify-content:space-between; padding:0.8rem; background:#f8f9fa; border:1px solid #ddd; border-radius:6px; margin-bottom:0.5rem; align-items:center;">
+            <div>
+              <span style="background:#e0f4f4; color:#0a7e8c; font-size:0.75rem; font-weight:bold; padding:2px 6px; border-radius:4px;">${l.region || 'Greater Accra'}</span>
+              <strong style="margin-left:0.5rem; color:#1a1a2e;">${l.town || l.location}</strong>
+            </div>
+            <div>
+              <span style="color:#0a7e8c; font-weight:bold; margin-right:1rem;">GH₵${Number(l.fee).toFixed(2)}</span>
+              <button onclick="deleteDelivery(${l.id})" style="background:#dc3545; border:none; color:#fff; padding:4px 8px; border-radius:4px; cursor:pointer;">Delete</button>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    async function saveDelivery(e) {
+      e.preventDefault();
+      const region = document.getElementById('delRegion').value;
+      const town = document.getElementById('delTown').value.trim();
+      const fee = document.getElementById('delFee').value;
+
+      await fetch('/api/admin/delivery/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: savedPass, loc: { region, town, fee } })
+      });
+      document.getElementById('delTown').value = '';
+      document.getElementById('delFee').value = '';
+      loadDelivery();
+    }    async function loadDelivery() {
+      const res = await fetch('/api/delivery');
       const locations = await res.json();
       const box = document.getElementById('deliveryList');
       if (!locations.length) {
