@@ -6,11 +6,61 @@
   <title>Track Your Order - Shop with ease</title>
   <link rel="stylesheet" href="/css/styles.css">
   <style>
-    .timeline { margin: 2rem 0; text-align: left; }
-    .step { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; }
-    .circle { width: 36px; height: 36px; border-radius: 50%; background: #dee2e6; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.95rem; flex-shrink: 0; }
-    .circle.active { background: #ff6b35; animation: pulse 1.5s infinite; }
-    .circle.done { background: #28a745; }
+    .timeline {
+      margin: 2rem 0;
+      text-align: left;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.2rem;
+    }
+    .circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #dee2e6;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 0.95rem;
+      flex-shrink: 0;
+    }
+    .circle.active {
+      background: #ff6b35;
+      animation: pulse 1.5s infinite;
+    }
+    .circle.done {
+      background: #28a745;
+    }
+    .note-card {
+      background: #eef7f8;
+      border-left: 5px solid #0a7e8c;
+      padding: 1.2rem;
+      border-radius: 8px;
+      margin: 1.2rem 0;
+      text-align: left;
+    }
+    .dl-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #28a745;
+      color: white;
+      font-size: 1.05rem;
+      font-weight: bold;
+      padding: 0.8rem 1.5rem;
+      border-radius: 8px;
+      text-decoration: none;
+      margin-top: 0.5rem;
+      box-shadow: 0 4px 12px rgba(40,167,69,0.2);
+    }
+    .dl-btn:hover {
+      background: #218838;
+    }
     @keyframes pulse {
       0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.4); }
       70% { transform: scale(1.08); box-shadow: 0 0 0 8px rgba(255, 107, 53, 0); }
@@ -19,30 +69,47 @@
   </style>
 </head>
 <body>
+  <!-- Navbar -->
   <nav class="navbar">
     <a href="/" class="navbar-brand">🛍️ Shop with <span>ease</span></a>
     <ul class="navbar-links">
       <li><a href="/">Home</a></li>
-      <li><a href="/track">Track Order 📦</a></li>
       <li><a href="/cart">Cart 🛒</a></li>
     </ul>
   </nav>
 
-  <div class="page-container" style="max-width: 600px; margin-top: 3rem;">
-    <div style="background: #fff; padding: 2.5rem 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); text-align: center;">
-      <h2>📦 Track Your Delivery Progress</h2>
-      <p style="color: #6c757d; margin: 0.5rem 0 1.5rem;">Enter your Order Reference Code (from your SMS / Receipt):</p>
+  <!-- Track Page Container -->
+  <div class="page-container" style="max-width: 600px; margin-top: 3rem; text-align: center;">
+    <div style="background: #fff; padding: 2.5rem 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.06);">
+      <h2>📦 Track Your Order</h2>
+      <p style="color: #6c757d; margin: 0.5rem 0 1.5rem;">Enter your Order Reference Code or MoMo Transaction ID:</p>
 
-      <form id="trackForm" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-        <input type="text" id="orderRef" placeholder="e.g. jwj3lm0yky" required style="flex:1; padding: 0.8rem; border: 1.5px solid #dee2e6; border-radius: 6px; font-size: 1rem;">
+      <!-- Search Form -->
+      <form id="trackForm" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+        <input type="text" id="orderRef" placeholder="e.g. jwj3lm0yky or MoMo Tx ID" required style="flex: 1; padding: 0.8rem; border: 1.5px solid #dee2e6; border-radius: 6px; font-size: 1rem;">
         <button type="submit" class="btn" style="width: auto; padding: 0.8rem 1.5rem; margin: 0; background: #0a7e8c;">Track</button>
       </form>
 
-      <div id="resultBox" style="display: none; margin-top: 2rem; text-align: left; background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border: 1px solid #e9ecef;">
+      <!-- Results Box -->
+      <div id="resultBox" style="display: none; text-align: left;">
         <h3 id="displayStatus" style="color: #0a7e8c; margin-bottom: 0.5rem;"></h3>
-        <div id="displayDetails" style="font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.5rem;"></div>
+        
+        <!-- Live Admin / Rider Note Card -->
+        <div class="note-card" id="noteCard">
+          <strong style="color: #0a7e8c; display: block; margin-bottom: 0.3rem;">📢 Latest Update from Store:</strong>
+          <span id="displayNote" style="font-size: 0.95rem; color: #2c3e50; line-height: 1.5;"></span>
+        </div>
 
-        <!-- Live Step Timeline -->
+        <!-- Order Summary Info -->
+        <div id="displayDetails" style="background: #f8f9fa; padding: 1.2rem; border-radius: 8px; font-size: 0.9rem; line-height: 1.6; border: 1px solid #e9ecef; margin-bottom: 1.5rem;"></div>
+
+        <!-- PDF Downloads Box (Appears if eBook is purchased & verified) -->
+        <div id="downloadContainer" style="display: none; margin-bottom: 1.5rem;">
+          <h4 style="color: #0a7e8c; margin-bottom: 0.5rem;">📥 Your Unlocked PDF Downloads:</h4>
+          <div id="downloadList"></div>
+        </div>
+
+        <!-- Step Timeline -->
         <div class="timeline">
           <div class="step">
             <div class="circle done" id="step1">✓</div>
@@ -62,8 +129,9 @@
           </div>
         </div>
 
-        <a id="waContact" href="#" target="_blank" class="btn" style="background:#25D366; display:block; text-align:center; text-decoration:none; margin-top:1rem; padding: 0.8rem;">
-          💬 Chat with Us on WhatsApp
+        <!-- WhatsApp Support Link -->
+        <a id="waContact" href="#" target="_blank" class="btn" style="background: #25D366; display: block; text-align: center; text-decoration: none; margin-top: 1.5rem; padding: 0.8rem;">
+          💬 Chat with Mary Appiah on WhatsApp
         </a>
       </div>
     </div>
@@ -75,36 +143,58 @@
       const ref = document.getElementById('orderRef').value.trim();
       const resultBox = document.getElementById('resultBox');
       const displayStatus = document.getElementById('displayStatus');
+      const displayNote = document.getElementById('displayNote');
       const displayDetails = document.getElementById('displayDetails');
+      const downloadContainer = document.getElementById('downloadContainer');
+      const downloadList = document.getElementById('downloadList');
 
       displayStatus.textContent = 'Searching for order...';
       displayDetails.innerHTML = '';
+      downloadContainer.style.display = 'none';
       resultBox.style.display = 'block';
 
       try {
-        const res = await fetch('/api/orders/' + ref);
+        const res = await fetch('/api/orders/' + encodeURIComponent(ref));
         const data = await res.json();
 
         if (data.success) {
           const o = data.order;
           displayStatus.textContent = 'Status: ' + (o.status || 'Processing');
+          
+          let noteMessage = o.deliveryNote || 'Your order is confirmed and being prepared for delivery.';
+          if (o.status === 'Awaiting MoMo Verification') {
+            noteMessage = '🔒 Awaiting Direct MoMo Verification. Please WhatsApp Mary Appiah (0536473017) with your Transaction Reference screenshot to instantly unlock your order / PDF download!';
+          }
+          displayNote.textContent = noteMessage;
+
           displayDetails.innerHTML = `
-            <strong>Order Code:</strong> ${o.reference}<br>
-            <strong>Customer:</strong> ${o.customerName || 'Customer'}<br>
-            <strong>Items:</strong> ${o.items || 'Store Items'}<br>
+            <strong>Order Reference:</strong> ${o.reference}<br>
+            <strong>Customer Name:</strong> ${o.customerName || 'Valued Customer'}<br>
+            <strong>Items Bought:</strong> ${o.items || 'Store Item'}<br>
             <strong>Delivery Address:</strong> ${o.address || 'Accra, Ghana'}<br>
-            <strong>Amount:</strong> GH₵${Number(o.amount).toFixed(2)}
+            <strong>Amount Paid:</strong> GH₵${Number(o.amount).toFixed(2)}
           `;
 
-          // Reset step circles
+          // Unlocked Book Downloads (If paid & verified)
+          if (o.downloads && o.downloads.length > 0 && o.status !== 'Awaiting MoMo Verification') {
+            downloadContainer.style.display = 'block';
+            downloadList.innerHTML = o.downloads.map(d => `
+              <div style="margin-bottom: 0.8rem; background: #eef7f8; padding: 1rem; border-radius: 6px; border: 1px solid #cce8ea;">
+                <strong style="display:block; font-size:1rem; color:#1a1a2e; margin-bottom:0.3rem;">${d.name}</strong>
+                <a href="${d.downloadUrl}" target="_blank" download class="dl-btn">📥 Download Complete PDF</a>
+              </div>
+            `).join('');
+          }
+
+          // Reset Timeline Steps
           ['step1', 'step2', 'step3', 'step4'].forEach(id => {
             document.getElementById(id).className = 'circle';
           });
 
-          // Update timeline based on Live Status
+          // Highlight current timeline progress
           document.getElementById('step1').className = 'circle done';
           const st = o.status || 'Packaging';
-          if (st === 'Packaging') {
+          if (st === 'Packaging' || st === 'Awaiting MoMo Verification') {
             document.getElementById('step2').className = 'circle active';
           } else if (st === 'Out for Delivery') {
             document.getElementById('step2').className = 'circle done';
@@ -115,18 +205,20 @@
             document.getElementById('step4').className = 'circle done';
           }
 
-          document.getElementById('waContact').href = `https://wa.me/233536473017?text=${encodeURIComponent('Hi, checking order: ' + o.reference)}`;
+          // Dynamic WhatsApp Support Link
+          document.getElementById('waContact').href = `https://wa.me/233536473017?text=${encodeURIComponent('Hello Mary Appiah, I am checking my order reference code: ' + o.reference)}`;
         } else {
           displayStatus.textContent = '❌ Order Not Found';
-          displayDetails.innerHTML = 'Please check your reference code and try again.';
+          displayNote.textContent = 'Please check your Order Reference Code / MoMo Transaction ID and try again.';
+          displayDetails.innerHTML = '';
         }
       } catch (err) {
         displayStatus.textContent = '❌ Connection Error';
-        displayDetails.innerHTML = 'Unable to check status. Try again later.';
+        displayNote.textContent = 'Unable to check status. Please check your network connection.';
       }
     });
 
-    // Auto-search if reference is in URL (e.g. /track?ref=jwj3lm0yky)
+    // Auto-search if reference is provided in URL (e.g. /track?ref=jwj3lm0yky)
     const urlRef = new URLSearchParams(window.location.search).get('ref');
     if (urlRef) {
       document.getElementById('orderRef').value = urlRef;
