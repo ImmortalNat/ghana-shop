@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin - Permanent Image Cloud & Store Manager</title>
+  <title>Admin - Store & Delivery Manager</title>
   <link rel="stylesheet" href="/css/styles.css">
   <style>
     .tab-bar { display:flex; gap:0.5rem; border-bottom:2px solid #dee2e6; margin-bottom:1.5rem; flex-wrap:wrap; }
@@ -14,14 +14,13 @@
     .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; }
     .modal-content { background:#fff; padding:2rem; border-radius:10px; max-width:520px; width:90%; max-height:90vh; overflow-y:auto; }
     .cat-pill { display:inline-flex; align-items:center; gap:0.5rem; background:#f1f8f9; border:1px solid #cce8ea; padding:0.5rem 1rem; border-radius:20px; font-weight:bold; font-size:0.9rem; margin:0.3rem; }
-    .cloud-badge { background:#d1fae5; color:#065f46; font-size:0.75rem; font-weight:bold; padding:2px 8px; border-radius:12px; display:inline-block; margin-top:4px; }
   </style>
 </head>
 <body>
-  <nav class="navbar"><a href="/" class="navbar-brand">🛡️ Admin <span>Permanent Store Manager</span></a><ul class="navbar-links"><li><a href="/" target="_blank">👁️ View Live Store</a></li></ul></nav>
+  <nav class="navbar"><a href="/" class="navbar-brand">🛡️ Admin <span>Store Manager</span></a><ul class="navbar-links"><li><a href="/" target="_blank">👁️ View Live Store</a></li></ul></nav>
 
   <div class="page-container" style="max-width:950px; margin-top:2rem;">
-    <!-- Login -->
+    <!-- Login Box -->
     <div id="loginBox" style="max-width:380px; margin:4rem auto; background:#fff; padding:2rem; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.05); text-align:center;">
       <h3>🔐 Admin Login</h3>
       <input type="password" id="adminPass" placeholder="Password (admin123)" style="width:100%; padding:0.8rem; margin:1rem 0; border:1.5px solid #ddd; border-radius:6px;">
@@ -30,9 +29,12 @@
 
     <!-- Main Dashboard -->
     <div id="dashboard" style="display:none;">
+      <!-- TAB NAVIGATION BAR -->
       <div class="tab-bar">
         <button class="tab-btn active" onclick="switchTab('productsTab',this)">🛍️ Products & eBooks</button>
+        <button class="tab-btn" onclick="switchTab('deliveryTab',this)">🚚 Delivery Fees</button>
         <button class="tab-btn" onclick="switchTab('categoriesTab',this)">🏷️ Categories</button>
+        <button class="tab-btn" onclick="switchTab('reviewsTab',this)">⭐ Reviews</button>
         <button class="tab-btn" onclick="switchTab('ordersTab',this)">📦 Customer Sales</button>
         <button class="tab-btn" onclick="switchTab('storefrontTab',this)">🎨 Storefront</button>
       </div>
@@ -40,16 +42,58 @@
       <!-- TAB 1: PRODUCTS -->
       <div id="productsTab">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:0.5rem;">
-          <div>
-            <h3 style="margin:0;">Product & eBook Catalog</h3>
-            <span class="cloud-badge">☁️ Permanent Cloud Storage Active</span>
-          </div>
-          <button class="btn" style="width:auto; background:#28a745; padding:0.6rem 1.2rem;" onclick="openProductModal()">➕ Upload New Item / Book</button>
+          <h3>Product & eBook Catalog</h3>
+          <button class="btn" style="width:auto; background:#28a745; padding:0.6rem 1.2rem;" onclick="openProductModal()">➕ Upload New Item</button>
         </div>
         <div class="products-grid" id="productsList" style="padding:0;"></div>
       </div>
 
-      <!-- TAB 2: CATEGORIES -->
+      <!-- TAB 2: DELIVERY FEES MANAGER -->
+      <div id="deliveryTab" style="display:none;">
+        <div class="admin-card">
+          <h3>➕ Add Ghana Region, Town & Delivery Fee</h3>
+          <p style="color:#6c757d; font-size:0.85rem; margin-bottom:1rem;">Add specific towns/cities under any Region with custom delivery fees in GH₵.</p>
+          <form onsubmit="saveDelivery(event)" style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+            <div class="form-group">
+              <label>1. Region *</label>
+              <select id="delRegion" required style="width:100%; padding:0.7rem; border-radius:6px; border:1px solid #ddd; font-weight:bold;">
+                <option value="Greater Accra">Greater Accra Region</option>
+                <option value="Ashanti">Ashanti Region</option>
+                <option value="Central">Central Region</option>
+                <option value="Western">Western Region</option>
+                <option value="Eastern">Eastern Region</option>
+                <option value="Northern">Northern Region</option>
+                <option value="Volta">Volta Region</option>
+                <option value="Upper East">Upper East Region</option>
+                <option value="Upper West">Upper West Region</option>
+                <option value="Bono">Bono Region</option>
+                <option value="Bono East">Bono East Region</option>
+                <option value="Ahafo">Ahafo Region</option>
+                <option value="Oti">Oti Region</option>
+                <option value="Savannah">Savannah Region</option>
+                <option value="North East">North East Region</option>
+                <option value="Western North">Western North Region</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>2. Town / City / Area Name *</label>
+              <input type="text" id="delTown" required placeholder="e.g. East Legon, KNUST, Takoradi Central">
+            </div>
+            <div class="form-group" style="grid-column: 1/-1;">
+              <label>3. Delivery Fee (GH₵) *</label>
+              <input type="number" step="1" id="delFee" required placeholder="e.g. 30">
+            </div>
+            <button type="submit" class="btn" style="grid-column:1/-1; background:#0a7e8c;">💾 Save Delivery Town & Fee</button>
+          </form>
+        </div>
+
+        <div class="admin-card">
+          <h3>Active Ghana Delivery Towns & Fees</h3>
+          <div id="deliveryList" style="margin-top:0.8rem;">Loading...</div>
+        </div>
+      </div>
+
+      <!-- TAB 3: CATEGORIES -->
       <div id="categoriesTab" style="display:none;">
         <div class="admin-card">
           <h3>➕ Add New Store Category</h3>
@@ -71,7 +115,16 @@
         </div>
       </div>
 
-      <!-- TAB 3: ORDERS -->
+      <!-- TAB 4: REVIEWS -->
+      <div id="reviewsTab" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+          <h3>⭐ Customer Reviews</h3>
+          <button class="btn" style="width:auto; padding:0.5rem 1rem; background:#6c757d;" onclick="loadAdminReviews()">🔄 Refresh</button>
+        </div>
+        <div id="reviewsList">Loading...</div>
+      </div>
+
+      <!-- TAB 5: ORDERS -->
       <div id="ordersTab" style="display:none;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
           <h3>Customer Sales & Deliveries</h3>
@@ -80,14 +133,15 @@
         <div id="ordersList">Loading...</div>
       </div>
 
-      <!-- TAB 4: STOREFRONT -->
+      <!-- TAB 6: STOREFRONT -->
       <div id="storefrontTab" style="display:none;">
-             <form id="storefrontForm" onsubmit="saveStorefront(event)">
+        <form id="storefrontForm" onsubmit="saveStorefront(event)">
           <div class="admin-card">
             <h3>🏷️ Store Branding & Contact</h3>
             <div class="form-group"><label>Store Name</label><input type="text" id="setStoreName" required></div>
             <div class="form-group"><label>Announcement Bar</label><input type="text" id="setAnnouncement"></div>
             <div class="form-group"><label>Hero Title</label><input type="text" id="setHeroTitle" required></div>
+            <div class="form-group"><label>Hero Subtitle</label><input type="text" id="setHeroSubtitle" required></div>
             <div class="form-group"><label>WhatsApp Support Number</label><input type="text" id="setWhatsapp" required></div>
           </div>
           <div class="admin-card">
@@ -101,65 +155,32 @@
     </div>
   </div>
 
-  <!-- Product & eBook Modal -->
+  <!-- Product Modal -->
   <div class="modal" id="prodModal">
     <div class="modal-content">
       <h3 id="modalTitle">Upload Item / eBook</h3>
       <form id="productForm" onsubmit="saveProduct(event)" style="margin-top:1rem;">
         <input type="hidden" id="prodId">
-        <input type="hidden" id="prodImageUrl">
+        <input type="hidden" id="prodImageBase64">
 
-        <div class="form-group">
-          <label>Product / Book Title *</label>
-          <input type="text" id="prodName" required placeholder="e.g. Starting a Business in Ghana">
-        </div>
+        <div class="form-group"><label>Title *</label><input type="text" id="prodName" required placeholder="e.g. Headphones"></div>
+        <div class="form-group"><label>Author / Brand (Optional)</label><input type="text" id="prodAuthor"></div>
+        <div class="form-group"><label>Price in GH₵ *</label><input type="number" step="0.01" id="prodPrice" required></div>
+        <div class="form-group"><label>Category *</label><select id="prodCategory" required style="width:100%; padding:0.7rem; border-radius:6px; border:1px solid #ddd;"></select></div>
 
-        <div class="form-group">
-          <label>Author / Brand (Optional)</label>
-          <input type="text" id="prodAuthor" placeholder="e.g. Kwame Mensah">
-        </div>
-
-        <div class="form-group">
-          <label>Price in GH₵ *</label>
-          <input type="number" step="0.01" id="prodPrice" required placeholder="e.g. 50">
-        </div>
-
-        <div class="form-group">
-          <label>Category *</label>
-          <select id="prodCategory" onchange="toggleBookFields()" required style="width:100%; padding:0.7rem; border-radius:6px; border:1px solid #ddd; font-weight:bold;"></select>
-        </div>
-
-        <!-- PDF Links (If category has Paywall) -->
         <div id="bookFieldsContainer" style="background:#f1f8f9; padding:1rem; border-radius:8px; border:1px solid #cce8ea; margin-bottom:1rem; display:none;">
           <h4 style="color:#0a7e8c; margin:0 0 0.5rem;">📖 Paywall eBook PDF Links</h4>
-          <div class="form-group">
-            <label>Free Preview PDF Link (Sample pages shown for free)</label>
-            <input type="url" id="prodPreviewUrl" placeholder="https://drive.google.com/file/d/...">
-          </div>
-          <div class="form-group">
-            <label>Full Complete PDF Link (Protected - Unlocked only after payment!)</label>
-            <input type="url" id="prodDownloadUrl" placeholder="https://drive.google.com/file/d/...">
-          </div>
-        </div>
-
-        <!-- ☁️ PERMANENT FREE IMAGE UPLOADER -->
-        <div class="form-group">
-          <label>Cover Photo / Image * (Camera / Gallery / File)</label>
-          <input type="file" id="prodFile" accept="image/*" onchange="uploadPermanentImage(event)" style="width:100%; padding:0.6rem; border:1.5px dashed #0a7e8c; border-radius:6px; background:#f8f9fa;">
-          
-          <div id="uploadProgress" style="display:none; color:#0a7e8c; font-size:0.85rem; font-weight:bold; margin-top:0.4rem;">
-            ⏳ Uploading image to Permanent Free Cloud...
-          </div>
-
-          <div style="margin-top:0.5rem;">
-            <img id="imgPreview" src="" style="display:none; width:120px; height:120px; object-fit:cover; border-radius:8px; border:1px solid #ddd;">
-          </div>
+          <div class="form-group"><label>Free Preview PDF Link</label><input type="url" id="prodPreviewUrl" placeholder="https://drive.google.com/..."></div>
+          <div class="form-group"><label>Full PDF Download Link (Protected)</label><input type="url" id="prodDownloadUrl" placeholder="https://drive.google.com/..."></div>
         </div>
 
         <div class="form-group">
-          <label>Description / Synopsis</label>
-          <textarea id="prodDesc" rows="3" style="width:100%; padding:0.7rem; border-radius:6px; border:1px solid #ddd;"></textarea>
+          <label>Photo / Cover Image *</label>
+          <input type="file" id="prodFile" accept="image/*" onchange="handleImageUpload(event)" style="width:100%; padding:0.6rem; border:1.5px dashed #0a7e8c; border-radius:6px; background:#f8f9fa;">
+          <img id="imgPreview" src="" style="display:none; width:100px; height:120px; object-fit:cover; border-radius:6px; margin-top:0.5rem; border:1px solid #ddd;">
         </div>
+
+        <div class="form-group"><label>Description</label><textarea id="prodDesc" rows="3" style="width:100%; padding:0.7rem; border-radius:6px; border:1px solid #ddd;"></textarea></div>
 
         <div style="display:flex; gap:0.5rem; margin-top:1.2rem;">
           <button type="submit" class="btn" id="saveProdBtn" style="background:#28a745;">Save Item</button>
@@ -176,9 +197,14 @@
     function switchTab(id, btn) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      ['productsTab','categoriesTab','ordersTab','storefrontTab'].forEach(t => document.getElementById(t).style.display = t === id ? 'block' : 'none');
+      ['productsTab','deliveryTab','categoriesTab','reviewsTab','ordersTab','storefrontTab'].forEach(t => {
+        const el = document.getElementById(t);
+        if (el) el.style.display = t === id ? 'block' : 'none';
+      });
       if (id === 'productsTab') loadProducts();
+      if (id === 'deliveryTab') loadDelivery();
       if (id === 'categoriesTab') loadCategories();
+      if (id === 'reviewsTab') loadAdminReviews();
       if (id === 'ordersTab') loadOrders();
       if (id === 'storefrontTab') loadSettings();
     }
@@ -194,84 +220,69 @@
       loadProducts();
     }
 
-    // ================= ☁️ PERMANENT CLOUD IMAGE UPLOADER =================
-    async function uploadPermanentImage(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const progress = document.getElementById('uploadProgress');
-      const saveBtn = document.getElementById('saveProdBtn');
-      progress.style.display = 'block';
-      saveBtn.disabled = true;
-
-      const formData = new FormData();
-      formData.append('image', file);
-
-      try {
-        // Upload to Free Permanent ImgBB Cloud API
-        const res = await fetch('https://api.imgbb.com/1/upload?key=c6d1d497c385b00c3b526685f096d299', {
-          method: 'POST',
-          body: formData
-        });
-        const data = await res.json();
-
-        if (data.success && data.data.url) {
-          const permanentUrl = data.data.url;
-          document.getElementById('prodImageUrl').value = permanentUrl;
-          
-          const preview = document.getElementById('imgPreview');
-          preview.src = permanentUrl;
-          preview.style.display = 'block';
-          
-          progress.style.color = '#28a745';
-          progress.textContent = '✅ Image saved permanently to Cloud!';
-        } else {
-          // Fallback to local Base64
-          readAsBase64Fallback(file);
-        }
-      } catch (err) {
-        // Fallback to local Base64
-        readAsBase64Fallback(file);
-      } finally {
-        saveBtn.disabled = false;
+    // ================= DELIVERY FEES MANAGER =================
+    async function loadDelivery() {
+      const res = await fetch('/api/delivery?t=' + Date.now());
+      const locations = await res.json();
+      const box = document.getElementById('deliveryList');
+      if (!locations.length) {
+        box.innerHTML = '<p>No delivery zones set. Delivery will be free.</p>';
+      } else {
+        box.innerHTML = locations.map(l => `
+          <div style="display:flex; justify-content:space-between; padding:0.8rem; background:#f8f9fa; border:1px solid #ddd; border-radius:6px; margin-bottom:0.5rem; align-items:center;">
+            <div>
+              <span style="background:#e0f4f4; color:#0a7e8c; font-size:0.75rem; font-weight:bold; padding:2px 6px; border-radius:4px;">${l.region || 'Greater Accra'}</span>
+              <strong style="margin-left:0.5rem; color:#1a1a2e;">${l.town || l.location}</strong>
+            </div>
+            <div>
+              <span style="color:#0a7e8c; font-weight:bold; margin-right:1rem;">GH₵${Number(l.fee).toFixed(2)}</span>
+              <button onclick="deleteDelivery(${l.id})" style="background:#dc3545; border:none; color:#fff; padding:4px 8px; border-radius:4px; cursor:pointer;">Delete</button>
+            </div>
+          </div>
+        `).join('');
       }
     }
 
-    function readAsBase64Fallback(file) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        document.getElementById('prodImageUrl').value = e.target.result;
-        const preview = document.getElementById('imgPreview');
-        preview.src = e.target.result;
-        preview.style.display = 'block';
-        document.getElementById('uploadProgress').textContent = '✅ Photo loaded!';
-      };
-      reader.readAsDataURL(file);
+    async function saveDelivery(e) {
+      e.preventDefault();
+      const region = document.getElementById('delRegion').value;
+      const town = document.getElementById('delTown').value.trim();
+      const fee = document.getElementById('delFee').value;
+
+      await fetch('/api/admin/delivery/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: savedPass, loc: { region, town, fee } })
+      });
+      document.getElementById('delTown').value = '';
+      document.getElementById('delFee').value = '';
+      loadDelivery();
     }
 
-    // ================= CATEGORIES MANAGER =================
+    async function deleteDelivery(id) {
+      if (!confirm('Delete this delivery zone?')) return;
+      await fetch('/api/admin/delivery/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: savedPass, id: id })
+      });
+      loadDelivery();
+    }
+
+    // ================= CATEGORIES =================
     async function loadCategories() {
-      const res = await fetch('/api/categories');
+      const res = await fetch('/api/categories?t=' + Date.now());
       storeCategories = await res.json();
-      
       const box = document.getElementById('categoriesList');
       box.innerHTML = storeCategories.map(c => `
         <div class="cat-pill">
-          <span>${c.icon} ${c.name} ${c.isPaywallBook ? '<small style="color:#0a7e8c;">(PDF Paywall)</small>' : ''}</span>
-          <button onclick="deleteCategory(${c.id})" style="background:none; border:none; color:#dc3545; cursor:pointer; font-weight:bold; margin-left:0.4rem;">✕</button>
+          <span>${c.icon} ${c.name}</span>
+          <button onclick="deleteCategory(${c.id})" style="background:none; border:none; color:#dc3545; cursor:pointer; font-weight:bold;">✕</button>
         </div>
       `).join('');
 
       const sel = document.getElementById('prodCategory');
       sel.innerHTML = storeCategories.map(c => `<option value="${c.name}">${c.icon} ${c.name}</option>`).join('');
-      toggleBookFields();
-    }
-
-    function toggleBookFields() {
-      const selVal = document.getElementById('prodCategory').value;
-      const cat = storeCategories.find(c => c.name === selVal);
-      const isBook = cat ? cat.isPaywallBook : (selVal === 'Online Books');
-      document.getElementById('bookFieldsContainer').style.display = isBook ? 'block' : 'none';
     }
 
     async function saveCategory(e) {
@@ -299,20 +310,15 @@
       loadCategories();
     }
 
-    // ================= PRODUCTS CRUD =================
+    // ================= PRODUCTS =================
     async function loadProducts() {
-      const res = await fetch('/api/products');
-      const ps = await res.json();
-      const box = document.getElementById('productsList');
-      if (!ps.length) return box.innerHTML = '<p>No products yet.</p>';
-
-      box.innerHTML = ps.map(p => `
+      const ps = await (await fetch('/api/products?t=' + Date.now())).json();
+      document.getElementById('productsList').innerHTML = ps.map(p => `
         <div class="admin-card">
           <img src="${p.image}" style="width:100%; height:160px; object-fit:cover; border-radius:6px;">
           <h4 style="margin:0.5rem 0 0.2rem;">${p.name}</h4>
-          <span style="color:#6c757d; font-size:0.85rem; display:block;">Category: ${p.category}</span>
-          <span style="color:#0a7e8c; font-weight:bold; font-size:1.1rem; display:block; margin:0.3rem 0;">GH₵${Number(p.price).toFixed(2)}</span>
-          <div style="display:flex; gap:0.5rem;">
+          <span style="color:#0a7e8c; font-weight:bold;">GH₵${Number(p.price).toFixed(2)}</span>
+          <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
             <button class="btn" style="padding:0.4rem; background:#0a7e8c;" onclick='editProduct(${JSON.stringify(p)})'>✏️ Edit</button>
             <button class="btn" style="padding:0.4rem; background:#dc3545;" onclick="deleteProduct(${p.id})">🗑️ Delete</button>
           </div>
@@ -320,15 +326,25 @@
       `).join('');
     }
 
+    function handleImageUpload(e) {
+      const f = e.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        document.getElementById('prodImageBase64').value = evt.target.result;
+        const p = document.getElementById('imgPreview');
+        p.src = evt.target.result; p.style.display = 'block';
+      };
+      reader.readAsDataURL(f);
+    }
+
     function openProductModal() {
-      document.getElementById('modalTitle').textContent = 'Upload New Item / Book';
-      ['prodId','prodName','prodAuthor','prodPrice','prodPreviewUrl','prodDownloadUrl','prodDesc','prodImageUrl'].forEach(id => {
+      document.getElementById('modalTitle').textContent = 'Upload Item / Book';
+      ['prodId','prodName','prodAuthor','prodPrice','prodPreviewUrl','prodDownloadUrl','prodDesc','prodImageBase64'].forEach(id => {
         if (document.getElementById(id)) document.getElementById(id).value = '';
       });
-      document.getElementById('uploadProgress').style.display = 'none';
       document.getElementById('imgPreview').style.display = 'none';
       document.getElementById('prodModal').style.display = 'flex';
-      toggleBookFields();
     }
 
     function closeProductModal() { document.getElementById('prodModal').style.display = 'none'; }
@@ -342,38 +358,38 @@
       document.getElementById('prodCategory').value = p.category;
       document.getElementById('prodPreviewUrl').value = p.previewUrl || '';
       document.getElementById('prodDownloadUrl').value = p.downloadUrl || '';
-      document.getElementById('prodImageUrl').value = p.image;
+      document.getElementById('prodImageBase64').value = p.image;
       document.getElementById('prodDesc').value = p.description || '';
       const preview = document.getElementById('imgPreview');
       preview.src = p.image; preview.style.display = 'block';
       document.getElementById('prodModal').style.display = 'flex';
-      toggleBookFields();
     }
 
     async function saveProduct(e) {
       e.preventDefault();
-      const image = document.getElementById('prodImageUrl').value;
-      if (!image) return alert('Please upload a cover photo or image');
+      const image = document.getElementById('prodImageBase64').value;
+      if (!image) return alert('Please select a photo / cover image');
 
       const btn = document.getElementById('saveProdBtn');
       btn.disabled = true; btn.textContent = 'Saving...';
 
-      const product = {
-        id: document.getElementById('prodId').value,
-        name: document.getElementById('prodName').value,
-        author: document.getElementById('prodAuthor').value,
-        price: document.getElementById('prodPrice').value,
-        category: document.getElementById('prodCategory').value,
-        previewUrl: document.getElementById('prodPreviewUrl').value,
-        downloadUrl: document.getElementById('prodDownloadUrl').value,
-        image: image,
-        description: document.getElementById('prodDesc').value
-      };
-
       await fetch('/api/admin/products/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: savedPass, product })
+        body: JSON.stringify({
+          password: savedPass,
+          product: {
+            id: document.getElementById('prodId').value,
+            name: document.getElementById('prodName').value,
+            author: document.getElementById('prodAuthor').value,
+            price: document.getElementById('prodPrice').value,
+            category: document.getElementById('prodCategory').value,
+            previewUrl: document.getElementById('prodPreviewUrl').value,
+            downloadUrl: document.getElementById('prodDownloadUrl').value,
+            image: image,
+            description: document.getElementById('prodDesc').value
+          }
+        })
       });
 
       btn.disabled = false; btn.textContent = 'Save Item';
@@ -391,50 +407,53 @@
       loadProducts();
     }
 
-    // ================= ORDERS =================
+    // ================= REVIEWS & ORDERS =================
+    async function loadAdminReviews() {
+      const res = await fetch('/api/admin/reviews', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:savedPass}) });
+      const data = await res.json();
+      const box = document.getElementById('reviewsList');
+      if (!data.reviews || !data.reviews.length) return box.innerHTML = '<p>No reviews yet.</p>';
+      box.innerHTML = data.reviews.map(r => `
+        <div class="admin-card">
+          <strong>${r.name} - ${'⭐'.repeat(r.rating)}</strong>
+          <p style="color:#4a5568; margin:0.3rem 0;">"${r.comment}"</p>
+          <button class="btn" style="width:auto; padding:0.3rem 0.8rem; background:#dc3545; font-size:0.8rem;" onclick="deleteReview(${r.id})">Delete</button>
+        </div>
+      `).join('');
+    }
+
+    async function deleteReview(id) {
+      if (!confirm('Delete review?')) return;
+      await fetch('/api/admin/reviews/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:savedPass, reviewId:id}) });
+      loadAdminReviews();
+    }
+
     async function loadOrders() {
-      const res = await fetch('/api/admin/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: savedPass })
-      });
+      const res = await fetch('/api/admin/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:savedPass}) });
       const data = await res.json();
       const box = document.getElementById('ordersList');
-      if (!data.orders.length) return box.innerHTML = '<p style="color:#6c757d; padding:2rem; text-align:center;">No sales yet.</p>';
-
+      if (!data.orders.length) return box.innerHTML = '<p>No orders yet.</p>';
       box.innerHTML = data.orders.map(o => `
         <div class="order-card">
           <div style="display:flex; justify-content:space-between;">
             <strong>Ref: ${o.reference}</strong>
-            <strong style="color:#0a7e8c; font-size:1.15rem;">GH₵${Number(o.amount).toFixed(2)}</strong>
+            <strong style="color:#0a7e8c;">GH₵${Number(o.amount).toFixed(2)}</strong>
           </div>
-          <div style="background:#f8f9fa; padding:0.8rem; margin:0.8rem 0; border-radius:6px; font-size:0.9rem; line-height:1.6;">
-            👤 <b>Customer:</b> ${o.customerName} (${o.customerEmail})<br>
-            📞 <b>Phone / MoMo:</b> <a href="https://wa.me/233${(o.phone||'').replace(/^0/,'')}" target="_blank" style="color:#25D366; font-weight:bold;">💬 WhatsApp ${o.phone}</a><br>
-            🛍️ <b>Items:</b> ${o.items}
-          </div>
+          <p style="font-size:0.9rem; margin-top:0.5rem;">👤 ${o.customerName} (${o.customerEmail})<br>📞 ${o.phone}<br>📍 ${o.address}<br>🛍️ ${o.items}</p>
         </div>
       `).join('');
     }
 
     // ================= SETTINGS =================
     async function loadSettings() {
-      const s = await (await fetch('/api/settings')).json();
+      const s = await (await fetch('/api/settings?t=' + Date.now())).json();
       document.getElementById('setStoreName').value = s.storeName || '';
       document.getElementById('setAnnouncement').value = s.announcement || '';
       document.getElementById('setHeroTitle').value = s.heroTitle || '';
       document.getElementById('setHeroSubtitle').value = s.heroSubtitle || '';
       document.getElementById('setWhatsapp').value = s.whatsappNumber || '';
-    }
-
-        async function loadSettings() {
-      const s = await (await fetch('/api/settings')).json();
-      document.getElementById('setStoreName').value = s.storeName || '';
-      document.getElementById('setAnnouncement').value = s.announcement || '';
-      document.getElementById('setHeroTitle').value = s.heroTitle || '';
-      document.getElementById('setWhatsapp').value = s.whatsappNumber || '';
-      if(document.getElementById('setMomoNumber')) document.getElementById('setMomoNumber').value = s.momoNumber || '';
-      if(document.getElementById('setMomoName')) document.getElementById('setMomoName').value = s.momoName || '';
+      if (document.getElementById('setMomoNumber')) document.getElementById('setMomoNumber').value = s.momoNumber || '';
+      if (document.getElementById('setMomoName')) document.getElementById('setMomoName').value = s.momoName || '';
     }
 
     async function saveStorefront(e) {
@@ -448,6 +467,7 @@
             storeName: document.getElementById('setStoreName').value,
             announcement: document.getElementById('setAnnouncement').value,
             heroTitle: document.getElementById('setHeroTitle').value,
+            heroSubtitle: document.getElementById('setHeroSubtitle').value,
             whatsappNumber: document.getElementById('setWhatsapp').value,
             momoNumber: document.getElementById('setMomoNumber') ? document.getElementById('setMomoNumber').value : '',
             momoName: document.getElementById('setMomoName') ? document.getElementById('setMomoName').value : ''
