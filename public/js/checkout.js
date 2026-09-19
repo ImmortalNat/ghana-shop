@@ -1,41 +1,81 @@
-// Default Ghana Regions & Towns (Guarantees Instant Dropdowns)
+// Comprehensive 16-Region Ghana Delivery Database
 const DEFAULT_GHANA_DELIVERY = [
-  // Greater Accra Region
+  // 1. Greater Accra Region
   { id: 1, region: "Greater Accra", town: "East Legon / Shiashie / Bawaleshie", fee: 25 },
   { id: 2, region: "Greater Accra", town: "Madina / Adenta / Abokobi", fee: 30 },
   { id: 3, region: "Greater Accra", town: "Circle / Osu / Ridge / Cantonments", fee: 20 },
   { id: 4, region: "Greater Accra", town: "Spintex / Teshie / Nungua", fee: 30 },
-  { id: 5, region: "Greater Accra", town: "Dansoman / Kaneshie / Lapaz", fee: 25 },
-  { id: 6, region: "Greater Accra", town: "Tema / Ashaiman / Dawhenya", fee: 40 },
-  { id: 7, region: "Greater Accra", town: "Kasoa / Weija / Mallam", fee: 35 },
-  { id: 8, region: "Greater Accra", town: "Legon Campus / UPSA", fee: 20 },
+  { id: 5, region: "Greater Accra", town: "Dansoman / Kaneshie / Lapaz / Achimota", fee: 25 },
+  { id: 6, region: "Greater Accra", town: "Tema / Ashaiman / Dawhenya / Prampram", fee: 40 },
+  { id: 7, region: "Greater Accra", town: "Kasoa / Weija / Mallam / Bortianor", fee: 35 },
+  { id: 8, region: "Greater Accra", town: "Legon Campus / UPSA / Haatso", fee: 20 },
 
-  // Ashanti Region
-  { id: 9, region: "Ashanti", town: "Kumasi Central (Adum / Asafo)", fee: 45 },
-  { id: 10, region: "Ashanti", town: "KNUST / Ayigya / Ayeduase", fee: 50 },
-  { id: 11, region: "Ashanti", town: "Bantama / Suame / Suntreso", fee: 45 },
-  { id: 12, region: "Ashanti", town: "Tafo / Alabar / Mamponteng", fee: 50 },
+  // 2. Ashanti Region
+  { id: 9, region: "Ashanti", town: "Kumasi Central (Adum / Asafo / Kejetia)", fee: 45 },
+  { id: 10, region: "Ashanti", town: "KNUST / Ayigya / Ayeduase / Kentinkrono", fee: 50 },
+  { id: 11, region: "Ashanti", town: "Bantama / Suame / Suntreso / Abrepo", fee: 45 },
+  { id: 12, region: "Ashanti", town: "Tafo / Pankrono / Alabar / Mamponteng", fee: 50 },
+  { id: 13, region: "Ashanti", town: "Asokwa / Ahodwo / Nhyiaeso", fee: 45 },
+  { id: 14, region: "Ashanti", town: "Ejisu / Mampong / Offinso", fee: 55 },
+  { id: 15, region: "Ashanti", town: "Obuasi / Bekwai", fee: 60 },
 
-  // Western Region
-  { id: 13, region: "Western", town: "Sekondi-Takoradi Central", fee: 55 },
-  { id: 14, region: "Western", town: "Tarkwa / UMaT Campus", fee: 60 },
+  // 3. Western Region
+  { id: 16, region: "Western", town: "Sekondi-Takoradi Central (Market Circle)", fee: 55 },
+  { id: 17, region: "Western", town: "Effia / Kwesimintsim / Fijai", fee: 55 },
+  { id: 18, region: "Western", town: "Tarkwa / UMaT Campus", fee: 60 },
+  { id: 19, region: "Western", town: "Axim / Elubo", fee: 65 },
 
-  // Central Region
-  { id: 15, region: "Central", town: "Cape Coast / UCC Campus", fee: 50 },
-  { id: 16, region: "Central", town: "Winneba / UEW Campus", fee: 45 },
+  // 4. Central Region
+  { id: 20, region: "Central", town: "Cape Coast / UCC Campus / Pedu", fee: 50 },
+  { id: 21, region: "Central", town: "Elmina / Komenda", fee: 55 },
+  { id: 22, region: "Central", town: "Winneba / UEW Campus", fee: 45 },
+  { id: 23, region: "Central", town: "Mankessim / Agona Swedru", fee: 50 },
 
-  // Eastern Region
-  { id: 17, region: "Eastern", town: "Koforidua Central", fee: 45 },
-  { id: 18, region: "Eastern", town: "Nsawam / Aburi", fee: 40 },
+  // 5. Eastern Region
+  { id: 24, region: "Eastern", town: "Koforidua Central / Effiduase", fee: 45 },
+  { id: 25, region: "Eastern", town: "Nsawam / Aburi / Larteh", fee: 40 },
+  { id: 26, region: "Eastern", town: "Suhum / Nkawkaw", fee: 50 },
+  { id: 27, region: "Eastern", town: "Akosombo / Somanya / Oda", fee: 55 },
 
-  // Northern Region
-  { id: 19, region: "Northern", town: "Tamale Central", fee: 65 },
+  // 6. Volta Region
+  { id: 28, region: "Volta", town: "Ho Central / UHAS Campus", fee: 50 },
+  { id: 29, region: "Volta", town: "Hohoe / Kpando", fee: 55 },
+  { id: 30, region: "Volta", town: "Aflao / Sogakope / Anloga", fee: 60 },
 
-  // Volta Region
-  { id: 20, region: "Volta", town: "Ho Central", fee: 50 },
+  // 7. Northern Region
+  { id: 31, region: "Northern", town: "Tamale Central / UDS Campus", fee: 65 },
+  { id: 32, region: "Northern", town: "Savelugu / Yendi", fee: 70 },
 
-  // Bono Region
-  { id: 21, region: "Bono", town: "Sunyani Central", fee: 60 }
+  // 8. Upper East Region
+  { id: 33, region: "Upper East", town: "Bolgatanga Central", fee: 70 },
+  { id: 34, region: "Upper East", town: "Navrongo / Bawku", fee: 75 },
+
+  // 9. Upper West Region
+  { id: 35, region: "Upper West", town: "Wa Central / UDS Wa", fee: 70 },
+  { id: 36, region: "Upper West", town: "Jirapa / Lawra", fee: 75 },
+
+  // 10. Bono Region
+  { id: 37, region: "Bono", town: "Sunyani Central / Fiapre", fee: 60 },
+  { id: 38, region: "Bono", town: "Berekum / Dormaa Ahenkro", fee: 65 },
+
+  // 11. Bono East Region
+  { id: 39, region: "Bono East", town: "Techiman Central", fee: 60 },
+  { id: 40, region: "Bono East", town: "Kintampo / Atebubu", fee: 65 },
+
+  // 12. Ahafo Region
+  { id: 41, region: "Ahafo", town: "Goaso / Mim / Kenyasi", fee: 65 },
+
+  // 13. Oti Region
+  { id: 42, region: "Oti", town: "Dambai / Jasikan / Nkwanta", fee: 65 },
+
+  // 14. Savannah Region
+  { id: 43, region: "Savannah", town: "Damongo / Salaga / Buipe", fee: 70 },
+
+  // 15. North East Region
+  { id: 44, region: "North East", town: "Nalerigu / Walewale", fee: 70 },
+
+  // 16. Western North Region
+  { id: 45, region: "Western North", town: "Sefwi Wiawso / Bibiani / Enchi", fee: 65 }
 ];
 
 let cart = [];
@@ -63,7 +103,6 @@ function initCart() {
   cartSubtotal = cart.reduce((s, i) => s + (Number(i.price || 0) * Number(i.qty || 1)), 0);
   grandTotal = cartSubtotal;
 
-  // Check if any items require physical delivery
   cart.forEach(item => {
     const cat = (item.category || '').toLowerCase();
     const nm = (item.name || '').toLowerCase();
@@ -75,7 +114,6 @@ function initCart() {
     }
   });
 
-  // If cart is NOT strictly digital-only, default to physical delivery
   if (!hasPhysicalItem && !hasDigitalItem) {
     hasPhysicalItem = true;
   }
@@ -183,7 +221,7 @@ async function loadSettingsAndDelivery() {
       }
     }
   } catch (err) {
-    console.error('Error fetching live delivery settings:', err);
+    console.error('Error loading delivery settings:', err);
   } finally {
     renderSummary();
     updateButtonText();
